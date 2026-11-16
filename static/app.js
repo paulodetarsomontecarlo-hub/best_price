@@ -9,6 +9,7 @@ const CARD_ZOOM = 10;      // com zoom: nome do posto + preço (cartão), sem so
 const CHIP_ZOOM = 8;       // zoom intermediário: só o preço; abaixo disso: pontos
 let products = [], product = null, stations = [], routes = [], selRoute = null, routeLine = null;
 let markers = new Map(), tiers = new Map();
+let plan = null, planLine = null;   // roteirizador: {data, from, to, ids:Set}
 
 const map = L.map('map', {zoomControl: false, center: [-21.23, -56.94], zoom: 6, minZoom: 4});
 L.control.zoom({position: 'bottomright'}).addTo(map);
@@ -41,6 +42,7 @@ async function api(path) {
 function bestIds() {
   const ids = new Set();
   if (selRoute) { const s = selRoute.stats[product]; if (s) ids.add(s.best_station_id); }
+  const pb = plan && planStats().best; if (pb) ids.add(pb.id);
   return ids;
 }
 
@@ -91,8 +93,9 @@ function render() {
   computeTiers();
   const best = bestIds();
   // prioridade: melhor da rota > mais barato > sem preço
+  const onRoute = id => !plan || plan.ids.has(id);
   const order = [...stations].sort((a, b) =>
-    (best.has(b.id) - best.has(a.id)) || ((a.prices[product]?.price ?? 1e9) - (b.prices[product]?.price ?? 1e9)));
+    (onRoute(b.id) - onRoute(a.id)) || (best.has(b.id) - best.has(a.id)) || ((a.prices[product]?.price ?? 1e9) - (b.prices[product]?.price ?? 1e9)));
   const placed = [];
   const free = (x, y, [w, h]) => !placed.some(r => x - w / 2 < r.x2 && x + w / 2 > r.x1 && y - h < r.y2 && y > r.y1);
   const take = (x, y, [w, h]) => placed.push({x1: x - w / 2, x2: x + w / 2, y1: y - h, y2: y});
@@ -104,9 +107,11 @@ function render() {
     }
     const pt = map.latLngToContainerPoint([st.lat, st.lon]);
     let mode = 'dot';
-    if (z >= CARD_ZOOM && free(pt.x, pt.y, BOX.card)) mode = 'card';
+    if (!onRoute(st.id)) mode = 'dot';  // fora do trajeto: só um ponto apagado
+    else if (z >= CARD_ZOOM && free(pt.x, pt.y, BOX.card)) mode = 'card';
     else if (z >= CHIP_ZOOM && free(pt.x, pt.y, BOX.chip)) mode = 'chip';
     take(pt.x, pt.y, BOX[mode]);
+    m.setOpacity(onRoute(st.id) ? 1 : .3);
     m.setIcon(icon(st, mode, best.has(st.id)));
     m.options.icon.options.popupAnchor = [0, mode === 'dot' ? -8 : -30];
     m.setZIndexOffset(100000 - rank * 100);
@@ -126,6 +131,7 @@ function renderRoutes() {
 }
 
 function pickRoute(id) {
+  clearPlan(false);
   selRoute = routes.find(r => r.id === id) || null;
   if (routeLine) { map.removeLayer(routeLine); routeLine = null; }
   if (selRoute) {
@@ -149,13 +155,142 @@ function renderProducts() {
 
 $('#products').onclick = e => {
   const b = e.target.closest('button'); if (!b) return;
-  product = b.dataset.p; renderProducts(); render(); renderRoutes();
+  product = b.dataset.p; renderProducts(); render(); renderRoutes(); renderPlan();
 };
 $('#routes').onclick = e => {
   const c = e.target.closest('.route'); if (!c) return;
   const id = +c.dataset.id;
   pickRoute(selRoute?.id === id ? null : id);
 };
+/* ---------- roteirizador ---------- */
+const chosen = {from: null, to: null};
+const fmtTime = m => m >= 60 ? `${Math.floor(m / 60)}h${String(m % 60).padStart(2, '0')}` : `${m} min`;
+const fmtKm = v => String(v).replace('.', ',');
+
+function planStats() {
+  const priced = plan.data.stations.filter(s => s.prices[product]);
+  if (!priced.length) return {n: 0};
+  const best = priced.reduce((a, b) => b.prices[product].price < a.prices[product].price ? b : a);
+  return {n: priced.length, avg: priced.reduce((t, s) => t + s.prices[product].price, 0) / priced.length, best};
+}
+
+function suggest(key, input, ul) {
+  let timer;
+  input.addEventListener('input', () => {
+    chosen[key] = null; clearTimeout(timer);
+    const q = input.value.trim();
+    if (q.length < 3) { ul.innerHTML = ''; return; }
+    timer = setTimeout(async () => {
+      try {
+        const res = await api('/api/geocode?q=' + encodeURIComponent(q));
+        if (input.value.trim() !== q) return;
+        ul._res = res;
+        ul.innerHTML = res.map((c, i) => `<li data-i="${i}">${esc(c.label)}</li>`).join('');
+      } catch { ul.innerHTML = ''; }
+    }, 450);
+  });
+  ul.addEventListener('click', e => {
+    const li = e.target.closest('li'); if (!li) return;
+    chosen[key] = ul._res[+li.dataset.i]; input.value = chosen[key].label; ul.innerHTML = '';
+  });
+  input.addEventListener('blur', () => setTimeout(() => { ul.innerHTML = ''; }, 250));
+}
+suggest('from', $('#fromIn'), $('#fromSug'));
+suggest('to', $('#toIn'), $('#toSug'));
+
+async function resolveCity(key, input) {
+  if (chosen[key]) return chosen[key];
+  const text = input.value.trim();
+  if (!text) throw new Error('Informe a cidade de ' + (key === 'from' ? 'saída.' : 'chegada.'));
+  const res = await api('/api/geocode?q=' + encodeURIComponent(text));
+  if (!res.length) throw new Error('Cidade não encontrada: ' + text);
+  chosen[key] = res[0]; input.value = res[0].label;
+  return res[0];
+}
+
+async function runPlan(e) {
+  e.preventDefault();
+  const out = $('#planOut'), btn = $('#goBtn');
+  btn.disabled = true; btn.textContent = 'Traçando…'; clearPlan(); out.innerHTML = '';
+  try {
+    const from = await resolveCity('from', $('#fromIn')), to = await resolveCity('to', $('#toIn'));
+    const d = await api(`/api/plan?from=${from.lat},${from.lon}&to=${to.lat},${to.lon}&radius=${$('#radius').value}`);
+    setPlan({data: d, from, to, ids: new Set(d.stations.map(s => s.id))});
+  } catch (err) {
+    out.innerHTML = `<p class="err">${esc(err.message)}</p>`;
+  } finally { btn.disabled = false; btn.textContent = 'Traçar rota'; }
+}
+
+function setPlan(p) {
+  clearPlan(false);
+  selRoute = null; if (routeLine) { map.removeLayer(routeLine); routeLine = null; }
+  renderRoutes();
+  plan = p;
+  const end = (pt, txt) => L.marker(pt, {zIndexOffset: 500000, icon: L.divIcon({className: '', iconSize: [0, 0], html: `<div class="endpin">${txt}</div>`})});
+  const g = p.data.geometry;
+  planLine = L.featureGroup([
+    L.polyline(g, {color: '#fff', weight: 9, opacity: .9}), L.polyline(g, {color: '#0f4c81', weight: 5, opacity: .9}),
+    end(g[0], 'A'), end(g[g.length - 1], 'B')]).addTo(map);
+  map.fitBounds(planLine.getBounds().pad(.08), {paddingTopLeft: [0, 70]});
+  render(); renderPlan();
+  toggle(false);
+}
+
+function clearPlan(redraw = true) {
+  if (planLine) { map.removeLayer(planLine); planLine = null; }
+  plan = null; renderPlan();
+  if (redraw) render();
+}
+
+function renderPlan() {
+  const bar = $('#planBar'), out = $('#planOut');
+  if (!plan) { bar.hidden = true; if (!out.querySelector('.err')) out.innerHTML = ''; return; }
+  const d = plan.data, st = planStats();
+  bar.hidden = false;
+  bar.innerHTML = `<b>${d.distance_km} km</b> · ${fmtTime(d.duration_min)} · ${d.stations.length} posto(s)` +
+    (st.n ? ` · melhor <b class="g">${brl(st.best.prices[product].price)}</b>` : '') + '<button id="barClear">Limpar</button>';
+  const to = plan.to;
+  out.innerHTML = `
+    <div class="sum"><div><b>${d.distance_km} km</b><span>distância</span></div><div><b>${fmtTime(d.duration_min)}</b><span>tempo</span></div><div><b>${d.stations.length}</b><span>postos</span></div></div>
+    <div class="route sel nohover">${st.n
+      ? `<div class="row"><span>Preço médio · ${esc(product)}</span><b>${brl(st.avg)}</b></div>
+         <div class="row best"><span>Melhor preço</span><b>${brl(st.best.prices[product].price)}</b></div>
+         <small>${esc(prettyName(st.best.name))} · ${esc(st.best.city)} · km ${fmtKm(st.best.km_along)}</small>`
+      : `<small>${d.stations.length ? 'Nenhum posto do trajeto tem preço de ' + esc(product) + ' cadastrado.' : 'Nenhum posto cadastrado a até ' + d.radius_km + ' km deste trajeto. Aumente a distância e trace de novo.'}</small>`}</div>
+    <div class="actions"><a class="waze" href="https://waze.com/ul?ll=${to.lat},${to.lon}&navigate=yes" target="_blank" rel="noopener">Abrir destino no Waze</a>
+      <button type="button" id="planClear" class="ghost">Limpar rota</button></div>
+    ${d.stations.length ? `<h3 class="stops-h">Postos no trajeto, na ordem</h3><ol class="stops">${d.stations.map(s => {
+      const p = s.prices[product], t = 't' + tiers.get(s.id), isBest = st.n && st.best.id === s.id;
+      return `<li data-id="${s.id}"><span class="km">${fmtKm(s.km_along)}<small>km</small></span>
+        <div class="who"><b>${isBest ? '<span class="star">★</span>' : ''}${esc(prettyName(s.name))}</b>
+        <small>${esc(s.city)}${s.offset_km >= 0.3 ? ' · ' + fmtKm(s.offset_km) + ' km fora da rota' : ' · na rota'}</small></div>
+        <span class="pp ${t}">${p ? num(p.price) : '—'}</span></li>`;
+    }).join('')}</ol>` : ''}`;
+}
+
+$('#planForm').onsubmit = runPlan;
+$('#planOut').onclick = e => {
+  if (e.target.id === 'planClear') return clearPlan();
+  const li = e.target.closest('.stops li'); if (!li) return;
+  const s = stations.find(x => x.id === +li.dataset.id), m = markers.get(+li.dataset.id);
+  if (!s || !m) return;
+  toggle(false);
+  map.setView([s.lat, s.lon], Math.max(map.getZoom(), 13), {animate: false});
+  render(); m.openPopup();
+};
+document.body.insertAdjacentHTML('beforeend', '<div id="planBar" hidden></div>');
+$('#planBar').onclick = e => { if (e.target.id === 'barClear') clearPlan(); };
+$('#swapBtn').onclick = () => {
+  [$('#fromIn').value, $('#toIn').value] = [$('#toIn').value, $('#fromIn').value];
+  [chosen.from, chosen.to] = [chosen.to, chosen.from];
+};
+$('#tabs').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  document.querySelectorAll('#tabs button').forEach(x => x.classList.toggle('on', x === b));
+  $('#tab-plan').hidden = b.dataset.tab !== 'plan';
+  $('#tab-routes').hidden = b.dataset.tab !== 'routes';
+};
+
 $('#menuBtn').onclick = () => toggle(true);
 $('#closeBtn').onclick = $('#scrim').onclick = () => toggle(false);
 map.on('zoomend', render);
@@ -173,4 +308,9 @@ map.on('zoomend', render);
   if (stations.length) map.fitBounds(L.latLngBounds(stations.map(s => [s.lat, s.lon])).pad(.1), {maxZoom: 7});
   const v = (new URLSearchParams(location.search).get('view') || '').split(',').map(Number); // ?view=lat,lon,zoom
   if (v.length === 3 && v.every(Number.isFinite)) map.setView([v[0], v[1]], v[2], {animate: false});
+  const qs = new URLSearchParams(location.search);  // ?de=Cidade&para=Cidade abre a rota pronta
+  if (qs.get('de') && qs.get('para')) {
+    $('#fromIn').value = qs.get('de'); $('#toIn').value = qs.get('para');
+    $('#planForm').requestSubmit();
+  }
 })();

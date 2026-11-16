@@ -19,6 +19,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
+import planner
+
 ROOT = Path(__file__).resolve().parent
 STATIC = ROOT / "static"
 DB_PATH = os.environ.get("DB_PATH", str(ROOT / "best_price.db"))
@@ -195,6 +197,8 @@ class Handler(BaseHTTPRequestHandler):
         if u.path.startswith("/api/"):
             if not self.client_ok(q):
                 return self.send_json({"error": "código de acesso inválido"}, 401)
+            if u.path in ("/api/geocode", "/api/plan"):
+                return self.planner(u.path, q)
             with db() as con:
                 if u.path == "/api/stations":
                     everything = self.is_admin() and q.get("all") == ["1"]
@@ -205,6 +209,29 @@ class Handler(BaseHTTPRequestHandler):
                     return self.send_json({"products": PRODUCTS})
             return self.send_json({"error": "não encontrado"}, 404)
         self.serve_static(u.path)
+
+    def planner(self, path, q):
+        def latlon(key):
+            lat, lon = (float(x) for x in (q.get(key) or [""])[0].split(","))
+            if not (-35 <= lat <= 6 and -75 <= lon <= -33):
+                raise ValueError("coordenadas fora do Brasil")
+            return lat, lon
+        try:
+            if path == "/api/geocode":
+                return self.send_json(planner.geocode((q.get("q") or [""])[0]))
+            a, b = latlon("from"), latlon("to")
+            radius = max(1.0, min(25.0, float((q.get("radius") or ["5"])[0])))
+            pts, km, minutes = planner.route(a, b)
+            with db() as con:
+                found = planner.stations_along(pts, stations_with_prices(con), radius)
+            return self.send_json({
+                "distance_km": round(km), "duration_min": round(minutes), "radius_km": radius,
+                "geometry": [[round(la, 5), round(lo, 5)] for la, lo in planner.simplify(pts)],
+                "stations": found})
+        except ValueError as e:
+            return self.send_json({"error": str(e) if "rota" in str(e) or "Brasil" in str(e) else "parâmetros inválidos"}, 400)
+        except OSError as e:  # sem internet / serviço fora do ar
+            return self.send_json({"error": "serviço de mapas indisponível no momento, tente novamente"}, 502)
 
     def serve_static(self, path):
         if path in ("", "/"):

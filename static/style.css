@@ -71,3 +71,46 @@ html,body{margin:0;height:100%;font-family:Inter,system-ui,-apple-system,"Segoe 
 .popup .when{margin-bottom:2px}
 .popup .waze{display:block;margin-top:10px;background:#33ccff;color:#05324a!important;text-align:center;font-weight:700;border-radius:12px;padding:12px;text-decoration:none;box-shadow:0 3px 10px #33ccff80}
 .popup .waze:active{filter:brightness(.95)}
+
+/* abas e roteirizador */
+#tabs{display:flex;gap:4px;margin:6px 14px 10px;padding:4px;background:#e2e8f0;border-radius:12px}
+#tabs button{flex:1;border:0;background:transparent;border-radius:9px;height:36px;font-family:inherit;font-weight:600;font-size:13.5px;color:var(--mute);cursor:pointer}
+#tabs button.on{background:#fff;color:var(--ink);box-shadow:0 1px 4px #0f172a26}
+.tab{overflow-y:auto;flex:1;padding:0 12px 24px}
+.tab[hidden]{display:none}
+#planForm{background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:12px;position:relative}
+.field{position:relative;margin-bottom:10px}
+.field label{display:block;font-size:11.5px;font-weight:600;color:var(--mute);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.field input,.field select{width:100%;height:44px;border:1.5px solid var(--line);border-radius:10px;padding:0 12px;font-family:inherit;font-size:15px;background:#f8fafc;color:var(--ink)}
+.field input:focus,.field select:focus{outline:0;border-color:var(--brand);background:#fff}
+.sug{list-style:none;margin:2px 0 0;padding:0;position:absolute;left:0;right:0;top:100%;z-index:5;background:#fff;border-radius:10px;box-shadow:0 8px 24px #0f172a40;overflow:hidden}
+.sug li{padding:11px 12px;font-size:14px;border-top:1px solid var(--line);cursor:pointer}
+.sug li:first-child{border-top:0}.sug li:hover{background:#f1f5f9}
+#swapBtn{position:absolute;right:20px;top:63px;z-index:2;width:34px;height:34px;border-radius:50%;border:1.5px solid var(--line);background:#fff;font-size:16px;cursor:pointer;color:var(--brand)}
+#goBtn{width:100%;height:46px;border:0;border-radius:12px;background:var(--brand);color:#fff;font-family:inherit;font-weight:700;font-size:15px;cursor:pointer;box-shadow:0 4px 12px #0f4c8159}
+#goBtn:disabled{opacity:.7;cursor:wait}
+#planOut{margin-top:12px}
+.err{background:#fef2f2;color:#b91c1c;border-radius:10px;padding:10px 12px;font-size:13.5px;margin:0}
+.sum{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
+.sum div{background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:9px 6px;text-align:center}
+.sum b{display:block;font-size:17px}.sum span{font-size:11px;color:var(--mute)}
+.route.nohover{cursor:default}.route.nohover:hover{border-color:var(--brand)}
+.actions{display:flex;gap:8px;margin:10px 0 4px}
+.actions .waze{flex:1;margin:0;padding:11px 8px;font-size:13.5px;background:#33ccff;color:#05324a;text-align:center;font-weight:700;border-radius:12px;text-decoration:none}
+.ghost{border:1.5px solid var(--line);background:#fff;border-radius:12px;padding:0 14px;font-family:inherit;font-weight:600;color:var(--mute);cursor:pointer}
+.stops-h{font-size:13px;margin:16px 2px 8px;color:var(--mute);text-transform:uppercase;letter-spacing:.05em}
+.stops{list-style:none;margin:0;padding:0}
+.stops li{display:flex;align-items:center;gap:10px;background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:9px 10px;margin-bottom:7px;cursor:pointer}
+.stops li:hover{border-color:#94a3b8}
+.stops .km{flex:none;width:46px;text-align:center;font-weight:700;font-size:15px;color:var(--brand);line-height:1}
+.stops .km small{display:block;font-size:10px;font-weight:500;color:var(--mute);margin-top:2px}
+.stops .who{flex:1;min-width:0}
+.stops .who b{display:block;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stops .who small{font-size:11.5px;color:var(--mute)}
+.pp{flex:none;font-weight:700;font-size:15px;font-variant-numeric:tabular-nums;color:var(--tn)}
+.pp.t0{color:var(--t0)}.pp.t1{color:var(--t1)}.pp.t2{color:var(--t2)}
+.endpin{position:absolute;width:28px;height:28px;border-radius:50%;background:var(--brand);color:#fff;font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;border:3px solid #fff;box-shadow:0 2px 8px #0f172a66;transform:translate(-50%,-50%)}
+#planBar{position:fixed;top:calc(66px + env(safe-area-inset-top));left:10px;z-index:999;background:#fff;border-radius:12px;padding:7px 8px 7px 12px;font-size:13px;box-shadow:0 4px 14px #0f172a26;display:flex;align-items:center;gap:6px;max-width:calc(100vw - 20px)}
+#planBar[hidden]{display:none}
+#planBar .g{color:var(--t0)}
+#planBar button{border:0;background:#e2e8f0;border-radius:8px;height:28px;padding:0 10px;font-family:inherit;font-weight:600;font-size:12px;cursor:pointer;margin-left:4px}

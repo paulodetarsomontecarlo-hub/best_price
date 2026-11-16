@@ -17,11 +17,33 @@
 
 <aside id="drawer" aria-hidden="true">
   <header>
-    <h1>Rotas</h1>
+    <h1>Best Price</h1>
     <button id="closeBtn" aria-label="Fechar">✕</button>
   </header>
-  <p class="hint">Valores para o produto selecionado no topo.</p>
-  <div id="routes"></div>
+  <nav id="tabs">
+    <button data-tab="plan" class="on">Roteirizador</button>
+    <button data-tab="routes">Rotas</button>
+  </nav>
+
+  <section id="tab-plan" class="tab">
+    <form id="planForm" autocomplete="off">
+      <div class="field"><label for="fromIn">Saída</label>
+        <input id="fromIn" placeholder="Cidade de partida" inputmode="search"><ul class="sug" id="fromSug"></ul></div>
+      <button type="button" id="swapBtn" aria-label="Inverter" title="Inverter">⇅</button>
+      <div class="field"><label for="toIn">Chegada</label>
+        <input id="toIn" placeholder="Cidade de destino" inputmode="search"><ul class="sug" id="toSug"></ul></div>
+      <div class="field"><label for="radius">Postos até</label>
+        <select id="radius"><option value="2">2 km da rota</option><option value="3" selected>3 km da rota</option>
+          <option value="5">5 km da rota</option><option value="10">10 km da rota</option></select></div>
+      <button type="submit" id="goBtn">Traçar rota</button>
+    </form>
+    <div id="planOut"></div>
+  </section>
+
+  <section id="tab-routes" class="tab" hidden>
+    <p class="hint">Valores para o produto selecionado no topo.</p>
+    <div id="routes"></div>
+  </section>
 </aside>
 <div id="scrim"></div>
 
