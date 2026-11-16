@@ -22,6 +22,8 @@ label small{color:#667}#msg{position:sticky;top:0;background:#fff;padding:6px 0;
 <select id="pst"></select>
 <div class="g3" id="pinputs"></div>
 <button id="psave">Salvar preços</button>
+<div class="g"><input id="e_lat" placeholder="Latitude"><input id="e_lon" placeholder="Longitude"></div>
+<button id="esave" class="sec">Salvar coordenadas do posto (⚠ = sem coordenadas, não aparece no mapa)</button>
 <small>Deixe em branco para remover o preço do produto.</small></section>
 
 <section><h2>Novo posto</h2>
@@ -55,10 +57,10 @@ async function call(method,path,body){
 }
 async function load(){
   const h={'X-Admin-Token':$('#tok').value};
-  stations=await (await fetch('/api/stations',{headers:h})).json();
+  stations=await (await fetch('/api/stations?all=1',{headers:h})).json();
   routes=await (await fetch('/api/routes',{headers:h})).json();
   if(!Array.isArray(stations)){stations=[];routes=[];return}
-  $('#pst').innerHTML=stations.map(s=>`<option value="${s.id}">${esc(s.name)} — ${esc(s.city)}</option>`).join('');
+  $('#pst').innerHTML=stations.map(s=>`<option value="${s.id}">${s.lat==null?'⚠ ':''}${esc(s.name)} — ${esc(s.city)}</option>`).join('');
   $('#pinputs').innerHTML=PRODUCTS.map((p,i)=>`<label><small>${p}</small><input inputmode="decimal" data-p="${p}" placeholder="0,00"></label>`).join('');
   fillPrices();
   $('#rsel').innerHTML='<option value="">+ Nova rota</option>'+routes.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join('');
@@ -66,6 +68,7 @@ async function load(){
 }
 function fillPrices(){
   const s=stations.find(x=>x.id==$('#pst').value);
+  $('#e_lat').value=s?.lat??'';$('#e_lon').value=s?.lon??'';
   document.querySelectorAll('#pinputs input').forEach(i=>{const p=s?.prices[i.dataset.p];i.value=p?String(p.price).replace('.',','):''});
 }
 function fillRoute(){
@@ -80,6 +83,9 @@ $('#pst').onchange=fillPrices;$('#rsel').onchange=fillRoute;$('#tok').onchange=l
 $('#psave').onclick=async()=>{
   const prices={};document.querySelectorAll('#pinputs input').forEach(i=>prices[i.dataset.p]=i.value.trim());
   await call('PUT','/api/admin/prices',{station_id:+$('#pst').value,prices});msg('Preços salvos');load()};
+$('#esave').onclick=async()=>{
+  const s=stations.find(x=>x.id==$('#pst').value);
+  await call('PUT','/api/admin/stations/'+s.id,{...s,lat:$('#e_lat').value,lon:$('#e_lon').value});msg('Coordenadas salvas');load()};
 $('#nsave').onclick=async()=>{
   await call('POST','/api/admin/stations',{name:$('#n_name').value,brand:$('#n_brand').value,city:$('#n_city').value,uf:$('#n_uf').value.toUpperCase(),highway:$('#n_hw').value,lat:$('#n_lat').value,lon:$('#n_lon').value});
   msg('Posto criado');document.querySelectorAll('section:nth-of-type(2) input').forEach(i=>i.value='');load()};

@@ -16,6 +16,7 @@ ADMIN_TOKEN=troque-isto python3 server.py        # http://localhost:8000
 - Cadastro de postos, preços e rotas: `/admin.html` (pede o `ADMIN_TOKEN`).
 - `CLIENT_CODE=abc123` (opcional): restringe a leitura ao grupo de clientes; compartilhe `http://host:8000/?code=abc123`.
 - `PORT` e `DB_PATH` também são configuráveis.
+- Importar postos de um KML/KMZ do Google Maps: `python3 import_kml.py Mapa_Postos.kmz`. Postos sem coordenadas no arquivo entram sem lat/lon (não aparecem no mapa); complete com `python3 geocode.py` (Nominatim/OSM, precisa de internet) ou pelo `/admin.html` (marcados com ⚠).
 - Importar postos de um CSV (ex.: do google-maps-scraper-kit): `python3 import_stations.py postos.csv --highway BR-163`.
 
 ## Tabelas

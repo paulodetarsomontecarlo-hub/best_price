@@ -34,8 +34,10 @@ CREATE TABLE IF NOT EXISTS stations (
   city TEXT DEFAULT '',
   uf TEXT DEFAULT '',
   highway TEXT DEFAULT '',
-  lat REAL NOT NULL,
-  lon REAL NOT NULL,
+  lat REAL,
+  lon REAL,
+  address TEXT DEFAULT '',
+  category TEXT DEFAULT '',
   active INTEGER NOT NULL DEFAULT 1
 );
 CREATE TABLE IF NOT EXISTS prices (
@@ -76,14 +78,19 @@ def db():
 def init_db():
     with db() as con:
         con.executescript(SCHEMA)
+        cols = {r["name"] for r in con.execute("PRAGMA table_info(stations)")}
+        for c in ("address", "category"):  # migração de bancos criados antes
+            if c not in cols:
+                con.execute(f"ALTER TABLE stations ADD COLUMN {c} TEXT DEFAULT ''")
 
 
 def now():
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
-def stations_with_prices(con):
-    rows = con.execute("SELECT * FROM stations WHERE active = 1 ORDER BY name").fetchall()
+def stations_with_prices(con, mapped_only=True):
+    where = "active = 1" + (" AND lat IS NOT NULL AND lon IS NOT NULL" if mapped_only else "")
+    rows = con.execute(f"SELECT * FROM stations WHERE {where} ORDER BY name").fetchall()
     prices = {}
     for p in con.execute("SELECT * FROM prices"):
         prices.setdefault(p["station_id"], {})[p["product"]] = {
@@ -171,7 +178,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send_json({"error": "código de acesso inválido"}, 401)
             with db() as con:
                 if u.path == "/api/stations":
-                    return self.send_json(stations_with_prices(con))
+                    everything = self.is_admin() and q.get("all") == ["1"]
+                    return self.send_json(stations_with_prices(con, mapped_only=not everything))
                 if u.path == "/api/routes":
                     return self.send_json(routes_with_stats(con))
                 if u.path == "/api/config":
@@ -224,16 +232,21 @@ class Handler(BaseHTTPRequestHandler):
             if method == "DELETE" and rid:
                 con.execute("UPDATE stations SET active = 0 WHERE id = ?", (rid,))
                 return {"ok": True}
-            need(b, "name", "lat", "lon")
+            need(b, "name")
+            lat = num(b["lat"], "lat") if b.get("lat") not in (None, "") else None
+            lon = num(b["lon"], "lon") if b.get("lon") not in (None, "") else None
+            if (lat is None) != (lon is None):
+                raise ValueError("informe latitude e longitude juntas")
             vals = (b["name"], b.get("brand", ""), b.get("city", ""), b.get("uf", ""),
-                    b.get("highway", ""), num(b["lat"], "lat"), num(b["lon"], "lon"))
+                    b.get("highway", ""), lat, lon, b.get("address", ""), b.get("category", ""))
             if method == "POST":
                 cur = con.execute(
-                    "INSERT INTO stations (name,brand,city,uf,highway,lat,lon) VALUES (?,?,?,?,?,?,?)", vals)
+                    "INSERT INTO stations (name,brand,city,uf,highway,lat,lon,address,category) "
+                    "VALUES (?,?,?,?,?,?,?,?,?)", vals)
                 return {"id": cur.lastrowid}
             if method == "PUT" and rid:
-                con.execute("UPDATE stations SET name=?,brand=?,city=?,uf=?,highway=?,lat=?,lon=? WHERE id=?",
-                            vals + (rid,))
+                con.execute("UPDATE stations SET name=?,brand=?,city=?,uf=?,highway=?,lat=?,lon=?,"
+                            "address=?,category=? WHERE id=?", vals + (rid,))
                 return {"ok": True}
         if res == "prices" and method == "PUT":
             # {"station_id": 1, "prices": {"DIESEL S-10": 6.12, "ARLA": 3.4}}  (vazio/null = remove)
