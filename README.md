@@ -13,7 +13,7 @@ encontrado ("a gente tenta cobrir").
 - [Preço melhor? (nota fiscal)](#preço-melhor-nota-fiscal) · [Roteirizador](#roteirizador) · [Ajuda via WhatsApp](#ajuda-via-whatsapp)
 - [Estrutura do repositório](#estrutura-do-repositório) · [Modelo de dados](#modelo-de-dados)
 - [Segurança e LGPD](#segurança-e-lgpd) · [Publicação](#publicação) · [Limitações e roadmap](#limitações-e-roadmap)
-- Documentação detalhada: [docs/API.md](docs/API.md) · [docs/OPERACAO.md](docs/OPERACAO.md) · [docs/ARQUITETURA.md](docs/ARQUITETURA.md) · [CLAUDE.md](CLAUDE.md)
+- Documentação detalhada: [docs/API.md](docs/API.md) · [docs/OPERACAO.md](docs/OPERACAO.md) · [docs/ARQUITETURA.md](docs/ARQUITETURA.md) · [docs/POSTOS.md](docs/POSTOS.md) · [CHANGELOG.md](CHANGELOG.md) · [CLAUDE.md](CLAUDE.md)
 
 ## Funcionalidades
 
@@ -132,7 +132,9 @@ import_kml.py / import_stations.py / geocode.py   importadores legados
 import_pluscodes.py    importador genérico de Plus Codes em texto (usa olc.py)
 data/seed.json         postos e rotas carregados em banco vazio
 static/                index.html, app.js, style.css, login.html, admin.html
-docs/                  API, operação do piloto, arquitetura
+docs/                  API, operação do piloto, arquitetura, lista de postos
+olc.py                 decodificador Open Location Code (usado por import_pluscodes.py)
+CHANGELOG.md          histórico do projeto
 CLAUDE.md              contexto para assistentes de código
 ```
 

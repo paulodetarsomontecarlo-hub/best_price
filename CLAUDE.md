@@ -19,6 +19,8 @@ Repositório: `paulodetarsomontecarlo-hub/best_price` (não usar o `fuel-prices/
 - `claims.py` — "Preço melhor?": cliente informa preço + anexa nota fiscal; admin analisa (pendente/analise/coberto/recusado) e pode aplicar o preço no posto.
 - `planner.py` — roteirizador: Nominatim (geocode, 1 req/s) + OSRM público; postos a ≤ N km da rota.
 - `static/` — `index.html`, `app.js`, `style.css`, `login.html`, `admin.html`.
+- olc.py — decodificador Open Location Code (usado pelo importador genérico).
+- Documentação: README.md (visão geral), docs/API.md, docs/OPERACAO.md, docs/ARQUITETURA.md, docs/POSTOS.md (lista dos 36 postos), CHANGELOG.md. **Atualize-os junto com qualquer mudança de comportamento.**
 - Importadores/scripts: `rebuild_from_pluscodes.py` (**fonte da verdade dos postos**), `check_pluscodes.py` (decoder de Plus Code), `import_clients.py` (clientes via CSV), `import_kml.py`, `import_stations.py`, `geocode.py` (legados).
 
 ## Dados dos postos
@@ -42,3 +44,29 @@ GET `/api/stations` `/api/routes` `/api/config` `/api/me` `/api/geocode?q=` `/ap
 ## Convenções
 - Commits terminam com `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`. Branch de trabalho: `claude/trusting-bardeen-5gmp50`.
 - Não commitar: `*.db`, `uploads/`, `.env`, `clientes*.csv`.
+
+## Painel admin (`/admin.html`, pede ADMIN_TOKEN)
+Seções: Preço melhor? (pedidos, ver nota, responder, coberto + aplicar preço) · Clientes (criar, redefinir senha, desativar) · Preços por posto · Novo posto · Rotas (nome, rodovia, ordem dos postos).
+
+## Armadilhas já encontradas (não repetir)
+- **Tiles**: CARTO deu "API KEY REQUIRED"; Esri/cinza ficou feio. Usar OSM padrão (mostra rodovias).
+- **Chave `}` faltando** em `icon()` deixa o mapa em branco → sempre validar o JS (`new Function` via Edge headless) e tirar screenshot depois de editar `app.js`.
+- **PowerShell**: `Set-Content`/`Get-Content` sem `-Encoding utf8` corrompe acentos (mojibake); `\n` em string de aspas simples é literal — use here-string ou a ferramenta Edit. Normalizar CRLF/LF antes de `.Replace`.
+- **Duas sessões do Claude** já trabalharam na mesma branch (conflito em `import_pluscodes.py`). Faça `git fetch` e confira `origin` antes de dar push.
+- Casamento automático posto-antigo→planilha pode herdar rodovia errada (ex.: Santópolis → SP-425); revisar no admin.
+- CSV da planilha de unidades está em **cp1252**; leia com fallback.
+- Mirassol KM 446 cai em São José do Rio Preto pelo Plus Code (cidade exibida = Rio Preto).
+
+## Como verificar mudanças
+1. Reiniciar: parar o `python server.py` antigo e subir de novo (env acima).
+2. `Invoke-WebRequest http://localhost:8000/login.html` → 200; `/api/stations` sem login → 401.
+3. Visual: `msedge --headless --screenshot=...` na página (login necessário para o mapa; usar o cliente de teste).
+4. Sem testes automatizados no repo.
+
+## Decisões do dono (preferências)
+- Português do Brasil em tudo; produto chamado **Pin Verde**.
+- Preferência por pins "chamativos, interativos e comerciais"; mapa colorido com rodovias.
+- Cadastros de clientes feitos pela própria equipe (sem auto-cadastro); depois chega uma base com todos.
+- "Preço melhor?": cliente anexa nota fiscal e a equipe tenta cobrir.
+- Planilha de Plus Codes é a única fonte dos postos; tudo que existia antes foi descartado.
+- Quer tudo documentado no GitHub e neste arquivo.
