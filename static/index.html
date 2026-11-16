@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Best Price · Diesel e Arla</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="map"></div>
+
+<div id="topbar">
+  <button id="menuBtn" aria-label="Menu">☰</button>
+  <div id="products" role="tablist"></div>
+</div>
+
+<aside id="drawer" aria-hidden="true">
+  <header>
+    <h1>Rotas</h1>
+    <button id="closeBtn" aria-label="Fechar">✕</button>
+  </header>
+  <p class="hint">Valores para o produto selecionado no topo.</p>
+  <div id="routes"></div>
+</aside>
+<div id="scrim"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

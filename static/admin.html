@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Best Price · Admin</title>
+<style>
+body{font-family:system-ui,sans-serif;max-width:760px;margin:0 auto;padding:12px;color:#1b1f24}
+h2{margin:24px 0 8px;font-size:17px}
+section{border:1px solid #dde2e8;border-radius:12px;padding:12px;margin-bottom:14px}
+input,select,button{font:inherit;padding:9px;border:1px solid #c5ccd5;border-radius:8px;width:100%;margin:3px 0}
+button{background:#0b5fff;color:#fff;border:0;font-weight:600;cursor:pointer}
+button.sec{background:#e8ecef;color:#1b1f24}
+.g{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+label small{color:#667}#msg{position:sticky;top:0;background:#fff;padding:6px 0;font-weight:600}
+.chk{display:flex;gap:8px;align-items:center}.chk input{width:auto}
+</style></head><body>
+<h1>Admin · Best Price</h1>
+<input id="tok" type="password" placeholder="Token de admin">
+<div id="msg"></div>
+
+<section><h2>Preços</h2>
+<select id="pst"></select>
+<div class="g3" id="pinputs"></div>
+<button id="psave">Salvar preços</button>
+<small>Deixe em branco para remover o preço do produto.</small></section>
+
+<section><h2>Novo posto</h2>
+<div class="g"><input id="n_name" placeholder="Nome"><input id="n_brand" placeholder="Bandeira">
+<input id="n_city" placeholder="Cidade"><input id="n_uf" placeholder="UF" maxlength="2">
+<input id="n_hw" placeholder="Rodovia (ex.: BR-163)"><span></span>
+<input id="n_lat" placeholder="Latitude (-20.46)"><input id="n_lon" placeholder="Longitude (-54.62)"></div>
+<button id="nsave">Adicionar posto</button></section>
+
+<section><h2>Rotas</h2>
+<select id="rsel"></select>
+<input id="r_name" placeholder="Nome da rota (ex.: Campo Grande → Dourados)">
+<input id="r_hw" placeholder="Rodovia">
+<small>Marque os postos na ordem do percurso (a ordem de marcação define a linha no mapa):</small>
+<div id="rstations"></div>
+<button id="rsave">Salvar rota</button><button id="rdel" class="sec">Excluir rota</button></section>
+
+<script>
+const PRODUCTS=['DIESEL S-10','DIESEL S-500','ARLA'];
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+$('#tok').value=sessionStorage.getItem('adm')||'';
+let stations=[],routes=[],order=[];
+const msg=(t,ok=true)=>{$('#msg').textContent=t;$('#msg').style.color=ok?'#0a7a35':'#c00'};
+async function call(method,path,body){
+  sessionStorage.setItem('adm',$('#tok').value);
+  const r=await fetch(path,{method,headers:{'Content-Type':'application/json','X-Admin-Token':$('#tok').value},body:body?JSON.stringify(body):undefined});
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok){msg(j.error||r.status,false);throw new Error(j.error)}
+  return j;
+}
+async function load(){
+  const h={'X-Admin-Token':$('#tok').value};
+  stations=await (await fetch('/api/stations',{headers:h})).json();
+  routes=await (await fetch('/api/routes',{headers:h})).json();
+  if(!Array.isArray(stations)){stations=[];routes=[];return}
+  $('#pst').innerHTML=stations.map(s=>`<option value="${s.id}">${esc(s.name)} — ${esc(s.city)}</option>`).join('');
+  $('#pinputs').innerHTML=PRODUCTS.map((p,i)=>`<label><small>${p}</small><input inputmode="decimal" data-p="${p}" placeholder="0,00"></label>`).join('');
+  fillPrices();
+  $('#rsel').innerHTML='<option value="">+ Nova rota</option>'+routes.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join('');
+  fillRoute();
+}
+function fillPrices(){
+  const s=stations.find(x=>x.id==$('#pst').value);
+  document.querySelectorAll('#pinputs input').forEach(i=>{const p=s?.prices[i.dataset.p];i.value=p?String(p.price).replace('.',','):''});
+}
+function fillRoute(){
+  const r=routes.find(x=>x.id==$('#rsel').value);
+  $('#r_name').value=r?.name||'';$('#r_hw').value=r?.highway||'';
+  order=r?[...r.station_ids]:[];
+  $('#rstations').innerHTML=stations.map(s=>`<label class="chk"><input type="checkbox" value="${s.id}" ${order.includes(s.id)?'checked':''}>${esc(s.name)} <small>${esc(s.city)}</small></label>`).join('');
+  document.querySelectorAll('#rstations input').forEach(c=>c.onchange=()=>{
+    const id=+c.value;order=c.checked?[...order.filter(x=>x!==id),id]:order.filter(x=>x!==id)});
+}
+$('#pst').onchange=fillPrices;$('#rsel').onchange=fillRoute;$('#tok').onchange=load;
+$('#psave').onclick=async()=>{
+  const prices={};document.querySelectorAll('#pinputs input').forEach(i=>prices[i.dataset.p]=i.value.trim());
+  await call('PUT','/api/admin/prices',{station_id:+$('#pst').value,prices});msg('Preços salvos');load()};
+$('#nsave').onclick=async()=>{
+  await call('POST','/api/admin/stations',{name:$('#n_name').value,brand:$('#n_brand').value,city:$('#n_city').value,uf:$('#n_uf').value.toUpperCase(),highway:$('#n_hw').value,lat:$('#n_lat').value,lon:$('#n_lon').value});
+  msg('Posto criado');document.querySelectorAll('section:nth-of-type(2) input').forEach(i=>i.value='');load()};
+$('#rsave').onclick=async()=>{
+  const id=$('#rsel').value,b={name:$('#r_name').value,highway:$('#r_hw').value,station_ids:order};
+  await call(id?'PUT':'POST','/api/admin/routes'+(id?'/'+id:''),b);msg('Rota salva');load()};
+$('#rdel').onclick=async()=>{const id=$('#rsel').value;if(id&&confirm('Excluir rota?')){await call('DELETE','/api/admin/routes/'+id);msg('Rota excluída');load()}};
+if($('#tok').value)load();
+</script></body></html>
