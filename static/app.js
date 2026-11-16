@@ -10,10 +10,10 @@ let markers = new Map();
 
 const map = L.map('map', {zoomControl: false, center: [-21.23, -56.94], zoom: 6, minZoom: 4});
 L.control.zoom({position: 'bottomright'}).addTo(map);
-const attr = '&copy; OpenStreetMap &copy; CARTO';
+const attr = 'Tiles &copy; Esri &mdash; Esri, HERE, Garmin, OpenStreetMap contributors';
 // base só com vias; nomes de cidades entram em camada separada, só com zoom
-L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {attribution: attr, maxZoom: 19}).addTo(map);
-const labels = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', {maxZoom: 19, pane: 'shadowPane'});
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {attribution: attr, maxNativeZoom: 16, maxZoom: 19}).addTo(map);
+const labels = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {maxNativeZoom: 16, maxZoom: 19, pane: 'shadowPane'});
 
 async function api(path) {
   const r = await fetch(path, {headers: CODE ? {'X-Client-Code': CODE} : {}});
