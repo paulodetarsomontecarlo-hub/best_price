@@ -19,6 +19,14 @@ ADMIN_TOKEN=troque-isto python3 server.py        # http://localhost:8000
 - Importar postos de um KML/KMZ do Google Maps: `python3 import_kml.py Mapa_Postos.kmz`. Postos sem coordenadas no arquivo entram sem lat/lon (não aparecem no mapa); complete com `python3 geocode.py` (Nominatim/OSM, precisa de internet) ou pelo `/admin.html` (marcados com ⚠).
 - Importar postos de um CSV (ex.: do google-maps-scraper-kit): `python3 import_stations.py postos.csv --highway BR-163`.
 
+## Postos por Plus Code
+
+```bash
+python3 import_pluscodes.py postos.txt [--replace]
+```
+
+Uma linha por posto: `33R4+XR Margem Esquerda, Gaspar - Santa Catarina ; Nome ; Bandeira ; Rodovia` (só o código é obrigatório). Códigos curtos usam a cidade como referência (Nominatim); códigos completos funcionam offline. `--replace` desativa os postos que não estão no arquivo.
+
 ## Dados iniciais
 
 `data/seed.json` traz os 63 postos da rede (do `Mapa_Postos.kmz`, com coordenadas corrigidas via OSM) e 7 rotas por rodovia; é carregado sozinho quando o banco está vazio. `geo_quality`: `ok` (confiável), `kml`, `approx` (só a cidade; confira no admin). Preços não vêm cadastrados.
