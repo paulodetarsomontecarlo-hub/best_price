@@ -114,3 +114,21 @@ html,body{margin:0;height:100%;font-family:Inter,system-ui,-apple-system,"Segoe 
 #planBar[hidden]{display:none}
 #planBar .g{color:var(--t0)}
 #planBar button{border:0;background:#e2e8f0;border-radius:8px;height:28px;padding:0 10px;font-family:inherit;font-weight:600;font-size:12px;cursor:pointer;margin-left:4px}
+
+/* pino de posto */
+.mpin{position:absolute;width:30px;height:40px;transform:translate(-50%,-100%);transform-origin:50% 100%;cursor:pointer;transition:transform .15s ease;filter:drop-shadow(0 3px 3px #0f172a59)}
+.mpin svg{display:block;overflow:visible}
+.mpin .bd{fill:var(--tn);stroke:#fff;stroke-width:2}
+.mpin .gl{fill:var(--tn)}
+.mpin.t0 .bd{fill:var(--t0)}.mpin.t0 .gl{fill:var(--t0)}
+.mpin.t1 .bd{fill:var(--t1)}.mpin.t1 .gl{fill:var(--t1)}
+.mpin.t2 .bd{fill:var(--t2)}.mpin.t2 .gl{fill:var(--t2)}
+.mpin::after{content:"";position:absolute;left:50%;bottom:-3px;width:14px;height:5px;margin-left:-7px;border-radius:50%;background:#0f172a33;z-index:-1}
+.leaflet-marker-icon:hover{z-index:9999999!important}
+.mpin:hover{transform:translate(-50%,-100%) scale(1.25)}
+.mpin:active{transform:translate(-50%,-100%) scale(1.05)}
+.mpin.best{transform:translate(-50%,-100%) scale(1.3);animation:bob 1.8s ease-in-out infinite}
+.mpin.best:hover{animation:none;transform:translate(-50%,-100%) scale(1.45)}
+.pstar{position:absolute;right:-9px;top:-7px;width:18px;height:18px;border-radius:50%;background:#f59e0b;color:#fff;font-size:11px;line-height:18px;text-align:center;border:2px solid #fff;box-sizing:content-box;margin:-2px}
+@keyframes bob{0%,100%{transform:translate(-50%,-100%) scale(1.3)}50%{transform:translate(-50%,calc(-100% - 5px)) scale(1.3)}}
+.leaflet-marker-icon:focus{outline:0}

@@ -61,7 +61,15 @@ const num = p => p.toFixed(2).replace('.', ',');
 
 function icon(st, mode, best) {
   const p = st.prices[product], t = 't' + tiers.get(st.id), star = best ? '<span class="star">★</span>' : '';
-  if (mode === 'dot') return L.divIcon({className: '', iconSize: [0, 0], html: `<div class="dot ${t}"></div>`});
+  if (mode === 'dot') {  // pino de posto (bomba de combustível), cor pela faixa de preço
+    const tip = esc(prettyName(st.name)) + (p ? ' · ' + brl(p.price) : '');
+    return L.divIcon({className: '', iconSize: [0, 0], html:
+      `<div class="mpin ${t}${best ? ' best' : ''}" title="${tip}"><svg viewBox="0 0 30 40" width="30" height="40" aria-hidden="true">
+        <path class="bd" d="M15 39C15 39 2 24.5 2 14.5 2 7.1 7.8 1 15 1s13 6.1 13 13.5C28 24.5 15 39 15 39z"/>
+        <circle cx="15" cy="14.5" r="8.6" fill="#fff"/>
+        <path class="gl" d="M10.6 9.3a1 1 0 0 1 1-1h4.1a1 1 0 0 1 1 1v10.4h-6.1zM17.7 10.7l2 1.9c.3.3.5.7.5 1.1v3.6a.9.9 0 0 0 1.8 0v-4.4l-2.5-2.4z"/>
+        <rect x="11.9" y="10" width="3.5" height="3" rx=".5" fill="#fff"/></svg>${best ? '<span class="pstar">★</span>' : ''}</div>`});
+  }
   if (mode === 'chip') {
     return L.divIcon({className: '', iconSize: [0, 0], html: `<div class="chip ${t}${best ? ' best' : ''}">${star}${p ? num(p.price) : '—'}</div>`});
   }
@@ -113,7 +121,7 @@ function render() {
     take(pt.x, pt.y, BOX[mode]);
     m.setOpacity(onRoute(st.id) ? 1 : .3);
     m.setIcon(icon(st, mode, best.has(st.id)));
-    m.options.icon.options.popupAnchor = [0, mode === 'dot' ? -8 : -30];
+    m.options.icon.options.popupAnchor = [0, mode === 'dot' ? -38 : -30];
     m.setZIndexOffset(100000 - rank * 100);
   });
 }
