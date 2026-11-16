@@ -17,7 +17,7 @@ Repositório: `paulodetarsomontecarlo-hub/best_price` (não usar o `fuel-prices/
 - `claims.py` — "Preço melhor?": cliente informa preço + anexa nota fiscal; admin analisa (pendente/analise/coberto/recusado) e pode aplicar o preço no posto.
 - `planner.py` — roteirizador: Nominatim (geocode, 1 req/s) + OSRM público; postos a ≤ N km da rota.
 - `static/` — `index.html`, `app.js`, `style.css`, `login.html`, `admin.html`.
-- Importadores/scripts: `rebuild_from_pluscodes.py` (**fonte da verdade dos postos**), `import_pluscodes.py` (decoder de Plus Code), `import_clients.py` (clientes via CSV), `import_kml.py`, `import_stations.py`, `geocode.py` (legados).
+- Importadores/scripts: `rebuild_from_pluscodes.py` (**fonte da verdade dos postos**), `check_pluscodes.py` (decoder de Plus Code), `import_clients.py` (clientes via CSV), `import_kml.py`, `import_stations.py`, `geocode.py` (legados).
 
 ## Dados dos postos
 - **Base oficial = `pluscode unidades.csv`** (Unidade;Bandeira;Plus Code; cp1252). `python rebuild_from_pluscodes.py "<csv>"` apaga postos/preços/rotas e recria tudo, regrava `data/seed.json`, gera preços mock e recria rotas por rodovia (a rodovia é herdada do posto antigo equivalente; novos ficam sem rodovia).

@@ -73,7 +73,7 @@ Cada Plus Code (Open Location Code) é decodificado em latitude/longitude; códi
 python rebuild_from_pluscodes.py "pluscode unidades.csv"
 ```
 O script **apaga** postos, preços e rotas atuais e recria: um posto por linha, `data/seed.json` atualizado, preços mock e rotas por rodovia (a rodovia é herdada do posto antigo equivalente quando o nome/cidade casam; postos novos ficam sem rodovia e portanto fora das rotas até alguém informá-la no admin).
-Para só **conferir** o casamento/coordenadas sem gravar: `python import_pluscodes.py "pluscode unidades.csv"` (acrescente `--apply` para gravar).
+Para só **conferir** o casamento/coordenadas sem gravar: `python check_pluscodes.py "pluscode unidades.csv"` (acrescente `--apply` para gravar).
 
 Situação atual: **36 postos**, todos com `geo_quality = ok`.
 
@@ -124,7 +124,7 @@ auth.py                CPF/CNPJ, senhas (scrypt), sessões, bloqueio por tentati
 claims.py              "Preço melhor?": validação, anexos, fila e aplicação do preço
 planner.py             roteirizador: geocode (Nominatim), rota (OSRM), postos ao longo da rota
 rebuild_from_pluscodes.py   refaz a base de postos a partir da planilha de Plus Codes  (fonte oficial)
-import_pluscodes.py    decodificador de Plus Code + conferência/ajuste de coordenadas
+check_pluscodes.py    decodificador de Plus Code + conferência/ajuste de coordenadas
 import_clients.py      cadastro de clientes por CSV
 import_kml.py / import_stations.py / geocode.py   importadores legados
 data/seed.json         postos e rotas carregados em banco vazio

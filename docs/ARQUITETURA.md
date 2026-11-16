@@ -35,7 +35,7 @@ Sem framework, sem build, sem dependências além do Python. O servidor serve os
 2. `route(a, b)` → OSRM (geometria simplificada).
 3. `stations_along(line, radius)` → distância ponto-a-polilinha; ordena por posição ao longo do trajeto.
 
-## Plus Code (`import_pluscodes.py`)
+## Plus Code (`check_pluscodes.py`)
 `decode()` converte Open Location Code completo em lat/lon (grade 20×20, refinamento 4×5). `recover()` completa códigos curtos escolhendo a célula mais próxima de uma referência (posto antigo, cidade conhecida ou geocodificação da cidade).
 
 ## Decisões

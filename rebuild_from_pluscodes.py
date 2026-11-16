@@ -15,7 +15,7 @@ import sys
 from datetime import datetime, timezone
 
 import import_kml
-import import_pluscodes as ip
+import check_pluscodes as ip
 import planner
 import server
 

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Corrige as coordenadas dos postos a partir de uma planilha com Plus Codes.
 
-Uso: python import_pluscodes.py "pluscode unidades.csv"          (só mostra o casamento)
-     python import_pluscodes.py "pluscode unidades.csv" --apply  (grava lat/lon, geo_quality='ok')
+Uso: python check_pluscodes.py "pluscode unidades.csv"          (só mostra o casamento)
+     python check_pluscodes.py "pluscode unidades.csv" --apply  (grava lat/lon, geo_quality='ok')
 
 Colunas: Unidade;Bandeira;Plus Code. O Plus Code curto (ex.: 6P55+W5 São José do Rio Preto) é
 completado usando a posição atual do posto casado como referência (vale quando o erro < ~50 km).
