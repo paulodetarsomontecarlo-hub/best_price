@@ -13,10 +13,10 @@ let plan = null, planLine = null;   // roteirizador: {data, from, to, ids:Set}
 
 const map = L.map('map', {zoomControl: false, center: [-21.23, -56.94], zoom: 6, minZoom: 4});
 L.control.zoom({position: 'bottomright'}).addTo(map);
-const attr = 'Tiles &copy; Esri &mdash; Esri, HERE, Garmin, OpenStreetMap contributors';
-// base só com vias; nomes de cidades entram em camada separada, só com zoom
-L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {attribution: attr, maxNativeZoom: 16, maxZoom: 19}).addTo(map);
-const labels = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {maxNativeZoom: 16, maxZoom: 19, pane: 'shadowPane'});
+const attr = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+// mapa colorido com rodovias (verde/laranja/rosa), cidades e rótulos já incluídos no tile
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {attribution: attr, maxZoom: 19}).addTo(map);
+const labels = L.layerGroup();  // (rótulos vêm no próprio tile; mantido só para a lógica de zoom)
 
 const legend = L.control({position: 'bottomleft'});
 legend.onAdd = () => {

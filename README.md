@@ -30,4 +30,4 @@ ADMIN_TOKEN=troque-isto python3 server.py        # http://localhost:8000
 ## Notas
 
 - Use HTTPS na frente do servidor (proxy reverso) ao publicar; o token e o código trafegam em header.
-- Tiles: Esri Light Gray Canvas (sem chave, com atribuição). Para uso comercial intenso, confira os termos da Esri ou troque por um provedor com chave (MapTiler, Stadia) em static/app.js.
+- Tiles: OpenStreetMap (tile.openstreetmap.org, gratuito, exige atribuição e uso leve). Para tráfego alto/comercial, troque a URL em `static/app.js` por um provedor com chave (MapTiler, Stadia, Mapbox) ou tiles próprios.
