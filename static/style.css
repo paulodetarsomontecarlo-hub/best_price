@@ -182,3 +182,9 @@ html,body{margin:0;height:100%;font-family:Inter,system-ui,-apple-system,"Segoe 
 .helpbtn{display:inline-block;background:#25d366;color:#fff!important;font-weight:700;font-size:14px;text-decoration:none;border-radius:22px;padding:9px 16px;box-shadow:0 4px 12px #25d36680;margin-left:10px!important;margin-bottom:2px!important}
 .helpbtn[hidden]{display:none}
 @media (max-width:480px){.bb{min-width:132px;padding:6px 10px 7px}.bb b{font-size:19px}}
+
+.bbs{display:flex;flex-direction:column;gap:8px}
+.acts{display:flex;gap:8px}
+.act{flex:1;border:0;border-radius:12px;padding:9px 10px;font:700 13px/1.1 inherit;font-family:inherit;text-align:center;text-decoration:none;color:#fff!important;cursor:pointer;box-shadow:0 3px 12px #0f172a40;white-space:nowrap}
+.act.help{background:#25d366}
+.act.note{background:var(--brand)}

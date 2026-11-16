@@ -28,7 +28,15 @@ legend.addTo(map);
 const bestBox = L.control({position: 'bottomright'});
 bestBox.onAdd = () => {
   const d = L.DomUtil.create('div', 'bestbox');
+  d.innerHTML = '<div class="bbs"></div><div class="acts"><a class="act help" id="helpBtn" target="_blank" rel="noopener">💬 Ajuda</a><button type="button" class="act note" id="noteBtn">📎 Anexar nota</button></div>';
   L.DomEvent.disableClickPropagation(d);
+  d.querySelector('#helpBtn').onclick = ev => {
+    const who = ($('#userName')?.textContent || '').replace('…', '').trim();
+    ev.currentTarget.href = `https://wa.me/${waNumber}?text=` + encodeURIComponent('Olá! Preciso de ajuda com o Best Price.' + (who ? ' (' + who + ')' : ''));
+  };
+  d.querySelector('#noteBtn').onclick = () => {
+    document.querySelector('#tabs button[data-tab="claim"]').click(); toggle(true);
+  };
   d.onclick = e => {
     const c = e.target.closest('.bb[data-id]'); if (!c) return;
     const s = stations.find(x => x.id === +c.dataset.id), m = markers.get(+c.dataset.id);
@@ -40,7 +48,7 @@ bestBox.onAdd = () => {
 bestBox.addTo(map);
 
 function renderBest() {
-  const box = bestBox.getContainer(); if (!box || !products.length) return;
+  const box = bestBox.getContainer()?.querySelector('.bbs'); if (!box || !products.length) return;
   const pool = plan ? plan.data.stations : stations;
   box.innerHTML = products.filter(p => p !== 'ARLA').map(pr => {
     const priced = pool.filter(s => s.prices[pr]);
@@ -52,20 +60,8 @@ function renderBest() {
   }).join('');
 }
 
-// botão Ajuda → WhatsApp (wa.me); só aparece se WHATSAPP_NUMBER estiver configurado no servidor
-let waNumber = '';
-const helpCtl = L.control({position: 'bottomleft'});
-helpCtl.onAdd = () => {
-  const a = L.DomUtil.create('a', 'helpbtn');
-  a.target = '_blank'; a.rel = 'noopener'; a.hidden = true; a.textContent = '💬 Ajuda';
-  L.DomEvent.disableClickPropagation(a);
-  a.onclick = () => {
-    const who = ($('#userName')?.textContent || '').replace('…', '').trim();
-    a.href = `https://wa.me/${waNumber}?text=` + encodeURIComponent('Olá! Preciso de ajuda com o Best Price.' + (who ? ` (${who})` : ''));
-  };
-  return a;
-};
-helpCtl.addTo(map);
+let waNumber = '5511999999999'; // telefone MOCK; o real vem de WHATSAPP_NUMBER no servidor
+
 
 const BRANDS = {IPIRANGA: '#1d4ed8', SHELL: '#eab308', BR: '#16a34a', BRANCA: '#64748b', PETRONAS: '#0d9488'};
 const SHORT = {'DIESEL S-10': 'S-10', 'DIESEL S-500': 'S-500', 'ARLA': 'ARLA'};
@@ -426,7 +422,7 @@ map.on('zoomend', render);
 (async () => {
   try {
     const cfg = await api('/api/config'); products = cfg.products; product = products[0];
-    waNumber = cfg.whatsapp || ''; helpCtl.getContainer().hidden = !waNumber;
+    if (cfg.whatsapp) waNumber = cfg.whatsapp;
     [stations, routes] = await Promise.all([api('/api/stations'), api('/api/routes')]);
   } catch (e) {
     if (e.message.startsWith('Sessão')) return;  // já redirecionando para o login
