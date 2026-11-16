@@ -294,9 +294,85 @@ $('#swapBtn').onclick = () => {
 $('#tabs').onclick = e => {
   const b = e.target.closest('button'); if (!b) return;
   document.querySelectorAll('#tabs button').forEach(x => x.classList.toggle('on', x === b));
-  $('#tab-plan').hidden = b.dataset.tab !== 'plan';
-  $('#tab-routes').hidden = b.dataset.tab !== 'routes';
+  for (const t of ['plan', 'routes', 'claim']) $('#tab-' + t).hidden = b.dataset.tab !== t;
+  if (b.dataset.tab === 'claim') loadClaims();
 };
+
+/* ---------- preço melhor? (nota fiscal como evidência) ---------- */
+let claimFile = null;
+const STATUS_TXT = {pendente: 'Aguardando análise', analise: 'Em análise', coberto: 'Cobrimos!', recusado: 'Não foi possível cobrir'};
+const isoDay = d => new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
+
+function initClaim() {
+  $('#cStation').innerHTML = '<option value="">Qualquer posto da rede</option>' + [...stations]
+    .sort((a, b) => (a.city + a.name).localeCompare(b.city + b.name))
+    .map(s => `<option value="${s.id}">${esc(prettyName(s.name))} — ${esc(s.city)}</option>`).join('');
+  $('#cProduct').innerHTML = products.map(p => `<option>${esc(p)}</option>`).join('');
+  const today = new Date(), min = new Date(today.getTime() - 30 * 864e5);
+  $('#cDate').max = isoDay(today); $('#cDate').min = isoDay(min); $('#cDate').value = isoDay(today);
+}
+
+// foto grande do celular → reduz para ~1800 px (JPEG) antes de enviar
+async function shrink(file) {
+  if (!file.type.startsWith('image/') || file.type === 'image/gif') return file;
+  try {
+    const bmp = await createImageBitmap(file), k = Math.min(1, 1800 / Math.max(bmp.width, bmp.height));
+    const c = document.createElement('canvas'); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+    c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+    const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', .85));
+    return blob && blob.size < file.size ? blob : file;
+  } catch { return file; }
+}
+
+$('#cFile').onchange = async e => {
+  const f = e.target.files[0], lab = $('#cFileName');
+  claimFile = null; lab.parentElement.classList.remove('ok');
+  if (!f) { lab.textContent = '📎 Anexar nota fiscal'; return; }
+  if (!/^(image\/|application\/pdf)/.test(f.type)) { lab.textContent = 'Envie uma foto ou PDF'; return; }
+  claimFile = await shrink(f);
+  if (claimFile.size > 8 * 1024 * 1024) { claimFile = null; lab.textContent = 'Arquivo maior que 8 MB'; return; }
+  lab.textContent = '✔ ' + f.name; lab.parentElement.classList.add('ok');
+};
+
+function claimMsg(text, ok = false) {
+  const m = $('#cMsg'); m.hidden = !text; m.textContent = text || '';
+  m.className = ok ? 'ok-msg' : 'err';
+}
+
+$('#claimForm').onsubmit = async e => {
+  e.preventDefault();
+  const btn = $('#cGo');
+  if (!claimFile) return claimMsg('Anexe a foto ou o PDF da nota fiscal.');
+  btn.disabled = true; btn.textContent = 'Enviando…'; claimMsg('');
+  try {
+    const r = await fetch('/api/claims', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({
+      station_id: $('#cStation').value, product: $('#cProduct').value, price: $('#cPrice').value, liters: $('#cLiters').value,
+      place_name: $('#cPlace').value, place_city: $('#cCity').value, purchased_on: $('#cDate').value, comment: $('#cComment').value})});
+    const j = await r.json().catch(() => ({}));
+    if (r.status === 401) return location.replace('/login.html');
+    if (!r.ok) throw new Error(j.error || 'Não foi possível enviar.');
+    const up = await fetch(`/api/claims/${j.id}/file`, {method: 'PUT', headers: {'Content-Type': claimFile.type || 'application/octet-stream'}, body: claimFile});
+    if (!up.ok) throw new Error((await up.json().catch(() => ({}))).error || 'Falha ao enviar a nota fiscal. Tente novamente.');
+    $('#claimForm').reset(); initClaim(); claimFile = null;
+    $('#cFileName').textContent = '📎 Anexar nota fiscal'; $('#cFileName').parentElement.classList.remove('ok');
+    claimMsg('Enviado! Vamos analisar a nota e te avisamos aqui mesmo.', true);
+    loadClaims();
+  } catch (err) { claimMsg(err.message); }
+  finally { btn.disabled = false; btn.textContent = 'Enviar para análise'; }
+};
+
+async function loadClaims() {
+  let list = [];
+  try { list = await api('/api/claims'); } catch { return; }
+  const dt = s => s.split('-').reverse().join('/');
+  $('#claimList').innerHTML = list.map(c => `<div class="claim">
+    <div class="top"><b>${esc(c.product)} · ${brl(c.price)}</b><span class="badge ${c.status}">${STATUS_TXT[c.status]}</span></div>
+    <small>${esc(c.place_name)}${c.place_city ? ' — ' + esc(c.place_city) : ''} · nota de ${dt(c.purchased_on)}</small>
+    ${c.station_name ? `<small>Posto da rede: ${esc(prettyName(c.station_name))}</small>` : ''}
+    ${c.status === 'coberto' && c.covered_price ? `<small><b style="color:var(--t0)">Preço coberto: ${brl(c.covered_price)}</b></small>` : ''}
+    ${c.admin_reply ? `<div class="reply">${esc(c.admin_reply)}</div>` : ''}</div>`).join('')
+    || '<p class="hint" style="margin:0">Você ainda não enviou nenhum comprovante.</p>';
+}
 
 $('#logoutBtn').onclick = async () => { await fetch('/api/logout', {method: 'POST'}); location.replace('/login.html'); };
 $('#menuBtn').onclick = () => toggle(true);
@@ -311,7 +387,7 @@ map.on('zoomend', render);
     if (e.message.startsWith('Sessão')) return;  // já redirecionando para o login
     alert('Erro ao carregar: ' + e.message); return;
   }
-  renderProducts(); render(); renderRoutes();
+  renderProducts(); render(); renderRoutes(); initClaim();
   api('/api/me').then(m => { $('#userName').textContent = m.name; }).catch(() => {});
   if (stations.length) map.fitBounds(L.latLngBounds(stations.map(s => [s.lat, s.lon])).pad(.1), {maxZoom: 7});
   const v = (new URLSearchParams(location.search).get('view') || '').split(',').map(Number); // ?view=lat,lon,zoom

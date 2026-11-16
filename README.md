@@ -19,13 +19,17 @@ ADMIN_TOKEN=troque-isto python3 server.py        # http://localhost:8000
 - Importar postos de um KML/KMZ do Google Maps: `python3 import_kml.py Mapa_Postos.kmz`. Postos sem coordenadas no arquivo entram sem lat/lon (não aparecem no mapa); complete com `python3 geocode.py` (Nominatim/OSM, precisa de internet) ou pelo `/admin.html` (marcados com ⚠).
 - Importar postos de um CSV (ex.: do google-maps-scraper-kit): `python3 import_stations.py postos.csv --highway BR-163`.
 
+## Preço melhor? (nota fiscal)
+
+No menu, aba **Preço melhor?**: o cliente informa produto, preço, onde achou, data e anexa a nota fiscal (foto/PDF, até 8 MB; fotos são reduzidas no celular). Notas só dos últimos 30 dias, até 10 envios por dia. A equipe analisa em /admin.html (ver nota, responder, marcar Coberto e, opcionalmente, já atualizar o preço do posto). Os anexos ficam em uploads/ (UPLOAD_DIR), fora do git: faça backup e restrinja o acesso, pois notas fiscais trazem dados pessoais (LGPD).
+
 ## Dados iniciais
 
 `data/seed.json` traz os 63 postos da rede (do `Mapa_Postos.kmz`, com coordenadas corrigidas via OSM) e 7 rotas por rodovia; é carregado sozinho quando o banco está vazio. `geo_quality`: `ok` (confiável), `kml`, `approx` (só a cidade; confira no admin). Preços não vêm cadastrados.
 
 ## Tabelas
 
-`clients`, `sessions`, `stations`, `prices` (um preço atual por posto/produto), `price_history`, `routes`, `route_stations` (ordem do percurso).
+`clients`, `sessions`, `price_claims`, `stations`, `prices` (um preço atual por posto/produto), `price_history`, `routes`, `route_stations` (ordem do percurso).
 
 ## Notas
 

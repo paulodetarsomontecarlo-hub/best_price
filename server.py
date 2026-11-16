@@ -5,6 +5,7 @@ Variáveis de ambiente:
   PORT          porta (padrão 8000)
   DB_PATH       arquivo SQLite (padrão best_price.db)
   ADMIN_TOKEN   token para /admin e escrita na API (obrigatório para cadastrar)
+  UPLOAD_DIR    pasta das notas fiscais enviadas (padrão ./uploads; mantenha fora do git e com backup)
   COOKIE_SECURE 1 para marcar o cookie de sessão como Secure (use com HTTPS)
 
 Clientes entram com CPF/CNPJ + senha (cadastrados no /admin.html ou por import_clients.py).
@@ -22,6 +23,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 import auth
+import claims
 import planner
 
 ROOT = Path(__file__).resolve().parent
@@ -85,6 +87,7 @@ def init_db():
     with db() as con:
         con.executescript(SCHEMA)
         con.executescript(auth.AUTH_SCHEMA)
+        con.executescript(claims.CLAIMS_SCHEMA)
         cols = {r["name"] for r in con.execute("PRAGMA table_info(stations)")}
         for c in ("address", "category", "geo_quality"):  # migração de bancos criados antes
             if c not in cols:
@@ -213,6 +216,13 @@ class Handler(BaseHTTPRequestHandler):
                 with db() as con:
                     c = auth.session_client(con, self.session_token())
                 return self.send_json({"name": (c["name"] or auth.fmt_doc(c["doc"])) if c else "Administrador"})
+            if u.path.startswith("/api/claims"):
+                return self.claims_api("GET", u.path)
+            if u.path == "/api/admin/claims":
+                if not self.is_admin():
+                    return self.send_json({"error": "token de admin inválido"}, 401)
+                with db() as con:
+                    return self.send_json(claims.list_claims(con))
             if u.path == "/api/admin/clients":
                 if not self.is_admin():
                     return self.send_json({"error": "token de admin inválido"}, 401)
@@ -274,7 +284,50 @@ class Handler(BaseHTTPRequestHandler):
         path = urlparse(self.path).path
         if path in ("/api/login", "/api/logout"):
             return self.auth_endpoint(path)
+        if path == "/api/claims":
+            return self.claims_api("POST", path)
         self.write("POST")
+
+    def claims_api(self, method, path):
+        """Rotas do cliente logado: /api/claims, /api/claims/<id>/file."""
+        parts = path.strip("/").split("/")
+        with db() as con:
+            client = auth.session_client(con, self.session_token())
+            try:
+                if len(parts) == 4 and parts[3] == "file" and parts[2].isdigit():
+                    cid = int(parts[2])
+                    if method == "GET":  # anexo: só o dono ou o admin
+                        if not (client or self.is_admin()):
+                            return self.send_json({"error": "login necessário"}, 401)
+                        fpath, ctype = claims.file_for(con, cid, None if self.is_admin() else client["id"])
+                        data = fpath.read_bytes()
+                        self.send_response(200)
+                        self.send_header("Content-Type", ctype)
+                        self.send_header("Content-Length", str(len(data)))
+                        self.send_header("Content-Disposition", "inline")
+                        self.send_header("X-Content-Type-Options", "nosniff")
+                        self.send_header("Cache-Control", "private, no-store")
+                        self.end_headers()
+                        return self.wfile.write(data)
+                    if method == "PUT":
+                        if not client:
+                            return self.send_json({"error": "login necessário"}, 401)
+                        n = int(self.headers.get("Content-Length") or 0)
+                        if n > claims.MAX_FILE:
+                            raise ValueError("arquivo grande demais (máx. 8 MB)")
+                        ctype = self.headers.get("Content-Type", "").split(";")[0].strip()
+                        claims.save_file(con, client["id"], cid, self.rfile.read(n), ctype)
+                        return self.send_json({"ok": True})
+                elif len(parts) == 2:
+                    if not client:
+                        return self.send_json({"error": "login necessário"}, 401)
+                    if method == "GET":
+                        return self.send_json(claims.list_claims(con, client["id"]))
+                    if method == "POST":
+                        return self.send_json({"id": claims.create_claim(con, client["id"], self.body(), PRODUCTS)})
+                return self.send_json({"error": "não encontrado"}, 404)
+            except (ValueError, json.JSONDecodeError) as e:
+                return self.send_json({"error": str(e) if isinstance(e, ValueError) and not isinstance(e, json.JSONDecodeError) else "requisição inválida"}, 400)
 
     def auth_endpoint(self, path):
         def reply(data, status=200, cookie=None):
@@ -303,6 +356,9 @@ class Handler(BaseHTTPRequestHandler):
         reply({"name": name}, cookie=self.set_cookie(token, auth.SESSION_DAYS * 86400))
 
     def do_PUT(self):
+        path = urlparse(self.path).path
+        if path.startswith("/api/claims/"):
+            return self.claims_api("PUT", path)
         self.write("PUT")
 
     def do_DELETE(self):
@@ -367,6 +423,8 @@ class Handler(BaseHTTPRequestHandler):
                 con.execute("INSERT INTO price_history (station_id,product,price,changed_at) VALUES (?,?,?,?)",
                             (sid, prod, p, ts))
             return {"ok": True}
+        if res == "claims" and method == "PUT" and rid:
+            return claims.update_claim(con, rid, b)
         if res == "clients":
             if method == "DELETE" and rid:  # desativa e derruba as sessões
                 con.execute("UPDATE clients SET active=0 WHERE id=?", (rid,))

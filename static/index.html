@@ -23,6 +23,7 @@
   <nav id="tabs">
     <button data-tab="plan" class="on">Roteirizador</button>
     <button data-tab="routes">Rotas</button>
+    <button data-tab="claim">Preço melhor?</button>
   </nav>
 
   <section id="tab-plan" class="tab">
@@ -43,6 +44,32 @@
   <section id="tab-routes" class="tab" hidden>
     <p class="hint">Valores para o produto selecionado no topo.</p>
     <div id="routes"></div>
+  </section>
+  <section id="tab-claim" class="tab" hidden>
+    <div class="claim-intro"><b>Achou um preço melhor?</b><br>Envie a nota fiscal como comprovante e a gente tenta cobrir.</div>
+    <form id="claimForm" autocomplete="off">
+      <div class="field"><label for="cStation">Posto da rede que você quer que cubra</label>
+        <select id="cStation"><option value="">Qualquer posto da rede</option></select></div>
+      <div class="field"><label for="cProduct">Produto</label><select id="cProduct"></select></div>
+      <div class="two">
+        <div class="field"><label for="cPrice">Preço encontrado (R$/L)</label><input id="cPrice" inputmode="decimal" placeholder="6,19" required></div>
+        <div class="field"><label for="cLiters">Litros (opcional)</label><input id="cLiters" inputmode="decimal" placeholder="500"></div>
+      </div>
+      <div class="field"><label for="cPlace">Onde você encontrou</label><input id="cPlace" placeholder="Nome do posto" maxlength="80" required></div>
+      <div class="two">
+        <div class="field"><label for="cCity">Cidade</label><input id="cCity" placeholder="Cidade" maxlength="60"></div>
+        <div class="field"><label for="cDate">Data da nota</label><input id="cDate" type="date" required></div>
+      </div>
+      <div class="field"><label>Nota fiscal (foto ou PDF) *</label>
+        <label class="filebtn" for="cFile"><span id="cFileName">📎 Anexar nota fiscal</span></label>
+        <input id="cFile" type="file" accept="image/*,application/pdf" hidden></div>
+      <div class="field"><label for="cComment">Observação (opcional)</label>
+        <input id="cComment" placeholder="Ex.: pagamento à vista, retirada no pátio" maxlength="500"></div>
+      <p id="cMsg" class="err" hidden></p>
+      <button type="submit" id="cGo">Enviar para análise</button>
+    </form>
+    <h3 class="stops-h">Meus envios</h3>
+    <div id="claimList"></div>
   </section>
   <footer id="userbar"><span>Conectado como<b id="userName">…</b></span><button id="logoutBtn">Sair</button></footer>
 </aside>

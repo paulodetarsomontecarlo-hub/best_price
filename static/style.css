@@ -150,3 +150,22 @@ html,body{margin:0;height:100%;font-family:Inter,system-ui,-apple-system,"Segoe 
 #userbar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 14px calc(10px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:#fff;font-size:13px;color:var(--mute)}
 #userbar b{color:var(--ink);display:block;max-width:210px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #logoutBtn{border:1.5px solid var(--line);background:#fff;border-radius:10px;height:34px;padding:0 14px;font-family:inherit;font-weight:600;color:var(--ink);cursor:pointer}
+
+/* preço melhor? */
+#tabs button{font-size:12.5px;padding:0 4px}
+.claim-intro{background:#ecfdf5;border:1.5px solid #a7f3d0;color:#065f46;border-radius:12px;padding:11px 13px;font-size:13.5px;margin-bottom:10px;line-height:1.45}
+#claimForm{background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:12px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.filebtn{display:flex;align-items:center;justify-content:center;min-height:50px;border:2px dashed #94a3b8;border-radius:12px;background:#f8fafc;color:var(--brand);font-weight:600;font-size:14px;cursor:pointer;text-align:center;padding:8px;text-transform:none;letter-spacing:0;word-break:break-all}
+.filebtn.ok{border-style:solid;border-color:var(--t0);background:#f0fdf4;color:#166534}
+#cGo{width:100%;height:46px;border:0;border-radius:12px;background:var(--t0);color:#fff;font-family:inherit;font-weight:700;font-size:15px;cursor:pointer;box-shadow:0 4px 12px #16a34a59}
+#cGo:disabled{opacity:.7;cursor:wait}
+.ok-msg{background:#f0fdf4;color:#166534;border-radius:10px;padding:10px 12px;font-size:13.5px;margin:0 0 10px}
+.claim{background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px;font-size:13px}
+.claim .top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:3px}
+.claim .top b{font-size:14px}
+.claim small{color:var(--mute);display:block}
+.badge{flex:none;border-radius:20px;padding:2px 9px;font-size:11.5px;font-weight:700;background:#e2e8f0;color:#334155}
+.badge.pendente{background:#fef3c7;color:#92400e}.badge.analise{background:#dbeafe;color:#1e40af}
+.badge.coberto{background:#dcfce7;color:#166534}.badge.recusado{background:#fee2e2;color:#991b1b}
+.claim .reply{margin-top:6px;background:#f1f5f9;border-radius:8px;padding:7px 9px;color:#334155}

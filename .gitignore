@@ -4,3 +4,5 @@ __pycache__/
 
 clientes_senhas_*.csv
 clientes*.csv
+
+uploads/

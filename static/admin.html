@@ -12,11 +12,15 @@ button.sec{background:#e8ecef;color:#1b1f24}
 .g{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .g3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 label small{color:#667}#msg{position:sticky;top:0;background:#fff;padding:6px 0;font-weight:600}
+.cl{border:1px solid #dde2e8;border-radius:10px;padding:10px;margin:8px 0;font-size:13px}.cl.done{opacity:.75}.cl b{font-size:14px}.cl .row2{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}.cl .tag{float:right;border-radius:12px;padding:1px 8px;font-size:11px;font-weight:700;background:#fef3c7;color:#92400e}.cl .tag.coberto{background:#dcfce7;color:#166534}.cl .tag.recusado{background:#fee2e2;color:#991b1b}.cl .tag.analise{background:#dbeafe;color:#1e40af}
 .chk{display:flex;gap:8px;align-items:center}.chk input{width:auto}
 </style></head><body>
 <h1>Admin · Best Price</h1>
 <input id="tok" type="password" placeholder="Token de admin">
 <div id="msg"></div>
+
+<section><h2>Preço melhor? (solicitações dos clientes)</h2>
+<div id="cl_list"><small>Carregando…</small></div></section>
 
 <section><h2>Clientes (acesso ao app)</h2>
 <div class="g"><input id="c_doc" placeholder="CPF ou CNPJ" inputmode="numeric"><input id="c_name" placeholder="Nome / razão social"></div>
@@ -93,7 +97,41 @@ async function load(){
   fillPrices();
   $('#rsel').innerHTML='<option value="">+ Nova rota</option>'+routes.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join('');
   fillRoute();
+  loadClaims();
 }
+const brl=v=>'R$ '+Number(v).toFixed(2).replace('.',',');
+const ST={pendente:'Pendente',analise:'Em análise',coberto:'Coberto',recusado:'Recusado'};
+async function loadClaims(){
+  const r=await fetch('/api/admin/claims',{headers:{'X-Admin-Token':$('#tok').value}});
+  if(!r.ok){$('#cl_list').innerHTML='<small>Informe o token de admin.</small>';return}
+  const cs=await r.json();
+  $('#cl_list').innerHTML=cs.length?cs.map(c=>{
+    const st=stations.find(s=>s.id===c.station_id),cur=st&&st.prices[c.product]?st.prices[c.product].price:null;
+    const done=c.status==='coberto'||c.status==='recusado';
+    return `<div class="cl ${done?'done':''}" data-id="${c.id}"><span class="tag ${c.status}">${ST[c.status]}</span>
+    <b>${esc(c.client_name||c.client_doc)}</b> <small>(${esc(c.client_doc)})</small><br>
+    ${esc(c.product)}: achou <b>${brl(c.price)}</b>${cur?` · nosso preço no posto: <b>${brl(cur)}</b> (diferença ${brl(cur-c.price)})`:''}<br>
+    <small>Onde: ${esc(c.place_name)}${c.place_city?' — '+esc(c.place_city):''} · nota de ${c.purchased_on.split('-').reverse().join('/')}${c.liters?' · '+c.liters+' L':''}</small><br>
+    ${st?`<small>Posto da rede: ${esc(st.name)} — ${esc(st.city)}</small><br>`:''}
+    ${c.comment?`<small>Obs.: ${esc(c.comment)}</small><br>`:''}
+    <button class="sec" style="width:auto;padding:6px 10px;margin-top:6px" data-note="${c.id}">Ver nota fiscal</button>
+    <div class="row2"><select data-f="status">${Object.entries(ST).map(([k,v])=>`<option value="${k}" ${k===c.status?'selected':''}>${v}</option>`).join('')}</select>
+    <input data-f="covered" inputmode="decimal" placeholder="Preço coberto (R$/L)" value="${c.covered_price??''}"></div>
+    <input data-f="reply" placeholder="Resposta ao cliente" value="${esc(c.admin_reply||'')}">
+    ${c.station_id?`<label class="chk"><input type="checkbox" data-f="apply"> Atualizar o preço do posto no app ao marcar "Coberto"</label>`:''}
+    <button data-save="${c.id}">Salvar</button></div>`}).join(''):'<small>Nenhuma solicitação ainda.</small>';
+}
+$('#cl_list').onclick=async e=>{
+  const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.note){
+    const w=window.open('','_blank');
+    const r=await fetch('/api/claims/'+b.dataset.note+'/file',{headers:{'X-Admin-Token':$('#tok').value}});
+    if(!r.ok){w.close();msg('Anexo não encontrado',false);return}
+    w.location=URL.createObjectURL(await r.blob());return}
+  if(b.dataset.save){
+    const box=b.closest('.cl'),g=f=>box.querySelector(`[data-f="${f}"]`);
+    const res=await call('PUT','/api/admin/claims/'+b.dataset.save,{status:g('status').value,covered_price:g('covered').value.replace(',','.'),admin_reply:g('reply').value,apply_price:!!(g('apply')&&g('apply').checked)});
+    msg(res.applied?'Salvo e preço do posto atualizado':'Salvo');load()}};
 function fillPrices(){
   const s=stations.find(x=>x.id==$('#pst').value);
   $('#e_lat').value=s?.lat??'';$('#e_lon').value=s?.lon??'';
