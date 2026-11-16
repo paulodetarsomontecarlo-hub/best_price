@@ -22,7 +22,7 @@ import urllib.request
 import import_kml
 import server
 
-UA = "best_price-geocoder/1.0"
+UA = "PinVerde-geocoder/1.0"
 
 
 def q(text):

@@ -32,7 +32,7 @@ bestBox.onAdd = () => {
   L.DomEvent.disableClickPropagation(d);
   d.querySelector('#helpBtn').onclick = ev => {
     const who = ($('#userName')?.textContent || '').replace('…', '').trim();
-    ev.currentTarget.href = `https://wa.me/${waNumber}?text=` + encodeURIComponent('Olá! Preciso de ajuda com o Best Price.' + (who ? ' (' + who + ')' : ''));
+    ev.currentTarget.href = `https://wa.me/${waNumber}?text=` + encodeURIComponent('Olá! Preciso de ajuda com o Pin Verde.' + (who ? ' (' + who + ')' : ''));
   };
   d.querySelector('#noteBtn').onclick = () => {
     document.querySelector('#tabs button[data-tab="claim"]').click(); toggle(true);

@@ -13,7 +13,7 @@ import urllib.request
 
 NOMINATIM_URL = os.environ.get("NOMINATIM_URL", "https://nominatim.openstreetmap.org")
 OSRM_URL = os.environ.get("OSRM_URL", "https://router.project-osrm.org")
-UA = "best_price/1.0 (roteirizador)"
+UA = "PinVerde/1.0 (roteirizador)"
 
 _lock = threading.Lock()
 _last_call = 0.0

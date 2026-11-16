@@ -1,4 +1,4 @@
-# Best Price
+# Pin Verde
 
 Aplicação web responsiva (mobile first) que mostra, num mapa, os **preços de Diesel S-10, Diesel S-500 e Arla**
 nos postos da rede Monte Carlo. Feita para um **grupo piloto de clientes**: acesso por CPF/CNPJ + senha,
@@ -116,7 +116,7 @@ Menu → **Roteirizador**: digite cidade de saída e de chegada (autocomplete), 
 
 ## Ajuda via WhatsApp
 
-Botão verde **💬 Ajuda** abre `https://wa.me/<número>?text=...` com a mensagem "Olá! Preciso de ajuda com o Best Price. (nome do cliente)". O número vem de `WHATSAPP_NUMBER`; enquanto não for definido, o front usa um **telefone fictício**.
+Botão verde **💬 Ajuda** abre `https://wa.me/<número>?text=...` com a mensagem "Olá! Preciso de ajuda com o Pin Verde. (nome do cliente)". O número vem de `WHATSAPP_NUMBER`; enquanto não for definido, o front usa um **telefone fictício**.
 
 ## Estrutura do repositório
 

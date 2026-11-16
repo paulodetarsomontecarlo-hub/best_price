@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""best_price: API + servidor estático (somente biblioteca padrão + SQLite).
+"""Pin Verde: API + servidor estático (somente biblioteca padrão + SQLite).
 
 Variáveis de ambiente:
   PORT          porta (padrão 8000)
@@ -168,7 +168,7 @@ def num(v, field):
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "best_price"
+    server_version = "PinVerde"
 
     def log_message(self, fmt, *args):
         sys.stderr.write("%s %s\n" % (self.address_string(), fmt % args))
@@ -482,7 +482,7 @@ def main():
     port = int(os.environ.get("PORT", 8000))
     if not ADMIN_TOKEN:
         print("AVISO: defina ADMIN_TOKEN para poder cadastrar postos/preços.", file=sys.stderr)
-    print(f"best_price em http://localhost:{port}")
+    print(f"Pin Verde em http://localhost:{port}")
     ThreadingHTTPServer(("0.0.0.0", port), Handler).serve_forever()
 
 

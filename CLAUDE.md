@@ -1,4 +1,6 @@
-# Best Price — contexto para o Claude
+# Pin Verde — contexto para o Claude
+
+> Nome do produto: **Pin Verde**. O repositório e o arquivo de banco ainda se chamam est_price / est_price.db (nomes técnicos, não visíveis ao cliente).
 
 Web app responsivo (mobile first) que mostra preços de **DIESEL S-10, DIESEL S-500 e ARLA** nos postos da rede
 Monte Carlo para um **grupo piloto de clientes**. Idioma do produto e do usuário: português do Brasil.
