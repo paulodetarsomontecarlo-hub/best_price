@@ -1,8 +1,6 @@
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const brl = v => 'R$ ' + Number(v).toFixed(2).replace('.', ',');
-const CODE = new URLSearchParams(location.search).get('code') || sessionStorage.getItem('code') || '';
-if (CODE) sessionStorage.setItem('code', CODE);
 
 
 const CARD_ZOOM = 10;      // com zoom: nome do posto + preço (cartão), sem sobrepor
@@ -34,7 +32,8 @@ const prettyName = n => String(n).toLowerCase().replace(/[\p{L}\d]+/gu, w =>
   ACRONYMS.has(w) || /\d/.test(w) ? w.toUpperCase() : LOWER.has(w) ? w : w[0].toUpperCase() + w.slice(1));
 
 async function api(path) {
-  const r = await fetch(path, {headers: CODE ? {'X-Client-Code': CODE} : {}});
+  const r = await fetch(path);
+  if (r.status === 401) { location.replace('/login.html'); throw new Error('Sessão expirada. Faça login novamente.'); }
   if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || r.status);
   return r.json();
 }
@@ -299,6 +298,7 @@ $('#tabs').onclick = e => {
   $('#tab-routes').hidden = b.dataset.tab !== 'routes';
 };
 
+$('#logoutBtn').onclick = async () => { await fetch('/api/logout', {method: 'POST'}); location.replace('/login.html'); };
 $('#menuBtn').onclick = () => toggle(true);
 $('#closeBtn').onclick = $('#scrim').onclick = () => toggle(false);
 map.on('zoomend', render);
@@ -308,11 +308,11 @@ map.on('zoomend', render);
     products = (await api('/api/config')).products; product = products[0];
     [stations, routes] = await Promise.all([api('/api/stations'), api('/api/routes')]);
   } catch (e) {
-    const c = e.message.includes('código') ? prompt('Código de acesso:') : null;
-    if (c) { sessionStorage.setItem('code', c); location.reload(); return; }
+    if (e.message.startsWith('Sessão')) return;  // já redirecionando para o login
     alert('Erro ao carregar: ' + e.message); return;
   }
   renderProducts(); render(); renderRoutes();
+  api('/api/me').then(m => { $('#userName').textContent = m.name; }).catch(() => {});
   if (stations.length) map.fitBounds(L.latLngBounds(stations.map(s => [s.lat, s.lon])).pad(.1), {maxZoom: 7});
   const v = (new URLSearchParams(location.search).get('view') || '').split(',').map(Number); // ?view=lat,lon,zoom
   if (v.length === 3 && v.every(Number.isFinite)) map.setView([v[0], v[1]], v[2], {animate: false});

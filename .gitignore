@@ -1,3 +1,6 @@
 *.db
 __pycache__/
 .env
+
+clientes_senhas_*.csv
+clientes*.csv

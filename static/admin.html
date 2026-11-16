@@ -18,6 +18,12 @@ label small{color:#667}#msg{position:sticky;top:0;background:#fff;padding:6px 0;
 <input id="tok" type="password" placeholder="Token de admin">
 <div id="msg"></div>
 
+<section><h2>Clientes (acesso ao app)</h2>
+<div class="g"><input id="c_doc" placeholder="CPF ou CNPJ" inputmode="numeric"><input id="c_name" placeholder="Nome / razão social"></div>
+<div class="g"><input id="c_pw" placeholder="Senha (mín. 6)"><button type="button" id="c_gen" class="sec">Gerar senha</button></div>
+<button id="c_save">Cadastrar cliente</button>
+<div id="c_list" style="margin-top:10px"></div></section>
+
 <section><h2>Preços</h2>
 <select id="pst"></select>
 <div class="g3" id="pinputs"></div>
@@ -55,7 +61,29 @@ async function call(method,path,body){
   if(!r.ok){msg(j.error||r.status,false);throw new Error(j.error)}
   return j;
 }
+const fmtDt=s=>s?new Date(s).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'nunca';
+async function loadClients(){
+  const r=await fetch('/api/admin/clients',{headers:{'X-Admin-Token':$('#tok').value}});
+  if(!r.ok)return;const cs=await r.json();
+  $('#c_list').innerHTML=cs.length?`<table style="width:100%;border-collapse:collapse;font-size:13px">`+cs.map(c=>`<tr style="border-top:1px solid #e2e8f0;${c.active?'':'opacity:.5'}">
+    <td style="padding:6px 4px"><b>${esc(c.name||'—')}</b><br><small>${esc(c.doc_fmt)} · último acesso: ${fmtDt(c.last_login)}</small></td>
+    <td style="text-align:right;white-space:nowrap"><button class="sec" style="width:auto;padding:6px 10px" data-pw="${c.id}">Nova senha</button>
+    <button class="sec" style="width:auto;padding:6px 10px" data-act="${c.id}" data-on="${c.active?0:1}">${c.active?'Desativar':'Ativar'}</button></td></tr>`).join('')+'</table>':'<small>Nenhum cliente cadastrado.</small>';
+}
+$('#c_gen').onclick=()=>{const a='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';$('#c_pw').value=Array.from(crypto.getRandomValues(new Uint32Array(8)),x=>a[x%a.length]).join('')};
+$('#c_save').onclick=async()=>{
+  const pw=$('#c_pw').value;
+  await call('POST','/api/admin/clients',{doc:$('#c_doc').value,name:$('#c_name').value,password:pw});
+  msg(`Cliente cadastrado. Senha: ${pw} (anote e envie ao cliente; ela não fica visível depois)`);
+  ['c_doc','c_name','c_pw'].forEach(i=>$('#'+i).value='');loadClients()};
+$('#c_list').onclick=async e=>{
+  const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.pw){const pw=prompt('Nova senha (mín. 6 caracteres):');if(!pw)return;
+    await call('PUT','/api/admin/clients/'+b.dataset.pw,{password:pw});msg('Senha alterada (sessões encerradas)');}
+  else if(b.dataset.act){await call('PUT','/api/admin/clients/'+b.dataset.act,{active:b.dataset.on==='1'});msg('Atualizado');}
+  loadClients()};
 async function load(){
+  loadClients();
   const h={'X-Admin-Token':$('#tok').value};
   stations=await (await fetch('/api/stations?all=1',{headers:h})).json();
   routes=await (await fetch('/api/routes',{headers:h})).json();
