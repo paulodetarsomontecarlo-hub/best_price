@@ -5,8 +5,11 @@ Variáveis de ambiente:
   PORT          porta (padrão 8000)
   DB_PATH       arquivo SQLite (padrão best_price.db)
   ADMIN_TOKEN   token para /admin e escrita na API (obrigatório para cadastrar)
-  CLIENT_CODE   se definido, clientes precisam do código (header X-Client-Code
-                ou ?code=) para ler os preços
+  UPLOAD_DIR    pasta das notas fiscais enviadas (padrão ./uploads; mantenha fora do git e com backup)
+  WHATSAPP_NUMBER  telefone do suporte com DDI+DDD, só dígitos (ex.: 5517999999999); habilita o botão Ajuda
+  COOKIE_SECURE 1 para marcar o cookie de sessão como Secure (use com HTTPS)
+
+Clientes entram com CPF/CNPJ + senha (cadastrados no /admin.html ou por import_clients.py).
 """
 import hmac
 import json
@@ -15,15 +18,21 @@ import os
 import sqlite3
 import sys
 from datetime import datetime, timezone
+from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
+
+import auth
+import claims
+import planner
 
 ROOT = Path(__file__).resolve().parent
 STATIC = ROOT / "static"
 DB_PATH = os.environ.get("DB_PATH", str(ROOT / "best_price.db"))
 ADMIN_TOKEN = os.environ.get("ADMIN_TOKEN", "")
-CLIENT_CODE = os.environ.get("CLIENT_CODE", "")
+COOKIE_SECURE = os.environ.get("COOKIE_SECURE") == "1"
+WHATSAPP_NUMBER = "".join(c for c in os.environ.get("WHATSAPP_NUMBER", "") if c.isdigit())  # ex.: 5517999999999
 PRODUCTS = ["DIESEL S-10", "DIESEL S-500", "ARLA"]
 
 SCHEMA = """
@@ -79,6 +88,8 @@ def db():
 def init_db():
     with db() as con:
         con.executescript(SCHEMA)
+        con.executescript(auth.AUTH_SCHEMA)
+        con.executescript(claims.CLAIMS_SCHEMA)
         cols = {r["name"] for r in con.execute("PRAGMA table_info(stations)")}
         for c in ("address", "category", "geo_quality"):  # migração de bancos criados antes
             if c not in cols:
@@ -176,11 +187,19 @@ class Handler(BaseHTTPRequestHandler):
         tok = self.headers.get("X-Admin-Token", "")
         return bool(ADMIN_TOKEN) and hmac.compare_digest(tok, ADMIN_TOKEN)
 
-    def client_ok(self, query):
-        if not CLIENT_CODE or self.is_admin():
+    def session_token(self):
+        c = SimpleCookie(self.headers.get("Cookie", ""))
+        return c["bp_session"].value if "bp_session" in c else ""
+
+    def client_ok(self, query=None):
+        if self.is_admin():
             return True
-        code = self.headers.get("X-Client-Code") or (query.get("code") or [""])[0]
-        return hmac.compare_digest(code, CLIENT_CODE)
+        with db() as con:
+            return auth.session_client(con, self.session_token()) is not None
+
+    def set_cookie(self, token, max_age):
+        flags = f"bp_session={token}; Path=/; HttpOnly; SameSite=Lax; Max-Age={max_age}"
+        return flags + ("; Secure" if COOKIE_SECURE else "")
 
     def body(self):
         n = int(self.headers.get("Content-Length") or 0)
@@ -194,7 +213,26 @@ class Handler(BaseHTTPRequestHandler):
         q = parse_qs(u.query)
         if u.path.startswith("/api/"):
             if not self.client_ok(q):
-                return self.send_json({"error": "código de acesso inválido"}, 401)
+                return self.send_json({"error": "login necessário"}, 401)
+            if u.path == "/api/me":
+                with db() as con:
+                    c = auth.session_client(con, self.session_token())
+                return self.send_json({"name": (c["name"] or auth.fmt_doc(c["doc"])) if c else "Administrador"})
+            if u.path.startswith("/api/claims"):
+                return self.claims_api("GET", u.path)
+            if u.path == "/api/admin/claims":
+                if not self.is_admin():
+                    return self.send_json({"error": "token de admin inválido"}, 401)
+                with db() as con:
+                    return self.send_json(claims.list_claims(con))
+            if u.path == "/api/admin/clients":
+                if not self.is_admin():
+                    return self.send_json({"error": "token de admin inválido"}, 401)
+                with db() as con:
+                    rows = con.execute("SELECT id,doc,name,active,created_at,last_login FROM clients ORDER BY name,doc")
+                    return self.send_json([{**dict(r), "doc_fmt": auth.fmt_doc(r["doc"])} for r in rows])
+            if u.path in ("/api/geocode", "/api/plan"):
+                return self.planner(u.path, q)
             with db() as con:
                 if u.path == "/api/stations":
                     everything = self.is_admin() and q.get("all") == ["1"]
@@ -202,9 +240,32 @@ class Handler(BaseHTTPRequestHandler):
                 if u.path == "/api/routes":
                     return self.send_json(routes_with_stats(con))
                 if u.path == "/api/config":
-                    return self.send_json({"products": PRODUCTS})
+                    return self.send_json({"products": PRODUCTS, "whatsapp": WHATSAPP_NUMBER})
             return self.send_json({"error": "não encontrado"}, 404)
         self.serve_static(u.path)
+
+    def planner(self, path, q):
+        def latlon(key):
+            lat, lon = (float(x) for x in (q.get(key) or [""])[0].split(","))
+            if not (-35 <= lat <= 6 and -75 <= lon <= -33):
+                raise ValueError("coordenadas fora do Brasil")
+            return lat, lon
+        try:
+            if path == "/api/geocode":
+                return self.send_json(planner.geocode((q.get("q") or [""])[0]))
+            a, b = latlon("from"), latlon("to")
+            radius = max(1.0, min(25.0, float((q.get("radius") or ["5"])[0])))
+            pts, km, minutes = planner.route(a, b)
+            with db() as con:
+                found = planner.stations_along(pts, stations_with_prices(con), radius)
+            return self.send_json({
+                "distance_km": round(km), "duration_min": round(minutes), "radius_km": radius,
+                "geometry": [[round(la, 5), round(lo, 5)] for la, lo in planner.simplify(pts)],
+                "stations": found})
+        except ValueError as e:
+            return self.send_json({"error": str(e) if "rota" in str(e) or "Brasil" in str(e) else "parâmetros inválidos"}, 400)
+        except OSError as e:  # sem internet / serviço fora do ar
+            return self.send_json({"error": "serviço de mapas indisponível no momento, tente novamente"}, 502)
 
     def serve_static(self, path):
         if path in ("", "/"):
@@ -222,9 +283,84 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(data)
 
     def do_POST(self):
+        path = urlparse(self.path).path
+        if path in ("/api/login", "/api/logout"):
+            return self.auth_endpoint(path)
+        if path == "/api/claims":
+            return self.claims_api("POST", path)
         self.write("POST")
 
+    def claims_api(self, method, path):
+        """Rotas do cliente logado: /api/claims, /api/claims/<id>/file."""
+        parts = path.strip("/").split("/")
+        with db() as con:
+            client = auth.session_client(con, self.session_token())
+            try:
+                if len(parts) == 4 and parts[3] == "file" and parts[2].isdigit():
+                    cid = int(parts[2])
+                    if method == "GET":  # anexo: só o dono ou o admin
+                        if not (client or self.is_admin()):
+                            return self.send_json({"error": "login necessário"}, 401)
+                        fpath, ctype = claims.file_for(con, cid, None if self.is_admin() else client["id"])
+                        data = fpath.read_bytes()
+                        self.send_response(200)
+                        self.send_header("Content-Type", ctype)
+                        self.send_header("Content-Length", str(len(data)))
+                        self.send_header("Content-Disposition", "inline")
+                        self.send_header("X-Content-Type-Options", "nosniff")
+                        self.send_header("Cache-Control", "private, no-store")
+                        self.end_headers()
+                        return self.wfile.write(data)
+                    if method == "PUT":
+                        if not client:
+                            return self.send_json({"error": "login necessário"}, 401)
+                        n = int(self.headers.get("Content-Length") or 0)
+                        if n > claims.MAX_FILE:
+                            raise ValueError("arquivo grande demais (máx. 8 MB)")
+                        ctype = self.headers.get("Content-Type", "").split(";")[0].strip()
+                        claims.save_file(con, client["id"], cid, self.rfile.read(n), ctype)
+                        return self.send_json({"ok": True})
+                elif len(parts) == 2:
+                    if not client:
+                        return self.send_json({"error": "login necessário"}, 401)
+                    if method == "GET":
+                        return self.send_json(claims.list_claims(con, client["id"]))
+                    if method == "POST":
+                        return self.send_json({"id": claims.create_claim(con, client["id"], self.body(), PRODUCTS)})
+                return self.send_json({"error": "não encontrado"}, 404)
+            except (ValueError, json.JSONDecodeError) as e:
+                return self.send_json({"error": str(e) if isinstance(e, ValueError) and not isinstance(e, json.JSONDecodeError) else "requisição inválida"}, 400)
+
+    def auth_endpoint(self, path):
+        def reply(data, status=200, cookie=None):
+            raw = json.dumps(data, ensure_ascii=False).encode()
+            self.send_response(status)
+            if cookie:
+                self.send_header("Set-Cookie", cookie)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Length", str(len(raw)))
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(raw)
+        if path == "/api/logout":
+            with db() as con:
+                auth.logout(con, self.session_token())
+            return reply({"ok": True}, cookie=self.set_cookie("", 0))
+        try:
+            b = self.body()
+            ip = self.headers.get("X-Forwarded-For", self.client_address[0]).split(",")[0].strip()
+            with db() as con:
+                token, name = auth.login(con, b.get("doc"), str(b.get("password") or ""), ip)
+        except json.JSONDecodeError:
+            return reply({"error": "Requisição inválida."}, 400)
+        except ValueError as e:
+            return reply({"error": str(e)}, 429 if "tentativas" in str(e) else 401)
+        reply({"name": name}, cookie=self.set_cookie(token, auth.SESSION_DAYS * 86400))
+
     def do_PUT(self):
+        path = urlparse(self.path).path
+        if path.startswith("/api/claims/"):
+            return self.claims_api("PUT", path)
         self.write("PUT")
 
     def do_DELETE(self):
@@ -289,6 +425,35 @@ class Handler(BaseHTTPRequestHandler):
                 con.execute("INSERT INTO price_history (station_id,product,price,changed_at) VALUES (?,?,?,?)",
                             (sid, prod, p, ts))
             return {"ok": True}
+        if res == "claims" and method == "PUT" and rid:
+            return claims.update_claim(con, rid, b)
+        if res == "clients":
+            if method == "DELETE" and rid:  # desativa e derruba as sessões
+                con.execute("UPDATE clients SET active=0 WHERE id=?", (rid,))
+                con.execute("DELETE FROM sessions WHERE client_id=?", (rid,))
+                return {"ok": True}
+            if method == "POST":
+                need(b, "doc", "password")
+                if not auth.valid_doc(b["doc"]):
+                    raise ValueError("CPF/CNPJ inválido")
+                if len(str(b["password"])) < auth.MIN_PASSWORD:
+                    raise ValueError(f"senha com pelo menos {auth.MIN_PASSWORD} caracteres")
+                if con.execute("SELECT 1 FROM clients WHERE doc=?", (auth.digits(b["doc"]),)).fetchone():
+                    raise ValueError("já existe cliente com esse CPF/CNPJ")
+                return {"id": auth.upsert_client(con, b["doc"], b.get("name", ""), str(b["password"]))[0]}
+            if method == "PUT" and rid:
+                if b.get("password"):
+                    if len(str(b["password"])) < auth.MIN_PASSWORD:
+                        raise ValueError(f"senha com pelo menos {auth.MIN_PASSWORD} caracteres")
+                    con.execute("UPDATE clients SET pwd_hash=? WHERE id=?", (auth.hash_password(str(b["password"])), rid))
+                    con.execute("DELETE FROM sessions WHERE client_id=?", (rid,))
+                if "name" in b:
+                    con.execute("UPDATE clients SET name=? WHERE id=?", (b["name"], rid))
+                if "active" in b:
+                    con.execute("UPDATE clients SET active=? WHERE id=?", (1 if b["active"] else 0, rid))
+                    if not b["active"]:
+                        con.execute("DELETE FROM sessions WHERE client_id=?", (rid,))
+                return {"ok": True}
         if res == "routes":
             if method == "DELETE" and rid:
                 con.execute("DELETE FROM routes WHERE id = ?", (rid,))
