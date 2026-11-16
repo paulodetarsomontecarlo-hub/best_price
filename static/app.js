@@ -24,6 +24,49 @@ legend.onAdd = () => {
 };
 legend.addTo(map);
 
+// melhores preços (S-10 e S-500): rede toda, ou só o trajeto quando há rota traçada
+const bestBox = L.control({position: 'bottomright'});
+bestBox.onAdd = () => {
+  const d = L.DomUtil.create('div', 'bestbox');
+  L.DomEvent.disableClickPropagation(d);
+  d.onclick = e => {
+    const c = e.target.closest('.bb[data-id]'); if (!c) return;
+    const s = stations.find(x => x.id === +c.dataset.id), m = markers.get(+c.dataset.id);
+    if (!s || !m) return;
+    map.setView([s.lat, s.lon], Math.max(map.getZoom(), 13), {animate: false}); render(); m.openPopup();
+  };
+  return d;
+};
+bestBox.addTo(map);
+
+function renderBest() {
+  const box = bestBox.getContainer(); if (!box || !products.length) return;
+  const pool = plan ? plan.data.stations : stations;
+  box.innerHTML = products.filter(p => p !== 'ARLA').map(pr => {
+    const priced = pool.filter(s => s.prices[pr]);
+    const b = priced.length ? priced.reduce((a, c) => c.prices[pr].price < a.prices[pr].price ? c : a) : null;
+    return `<div class="bb${b ? '' : ' none'}"${b ? ` data-id="${b.id}"` : ''}>
+      <span class="lbl">Melhor ${esc(pr.replace('DIESEL ', 'Diesel '))}${plan ? ' · rota' : ''}</span>
+      <b>${b ? brl(b.prices[pr].price) : '—'}</b>
+      ${b ? `<small>${esc(prettyName(b.name))} · ${esc(b.city)}</small>` : '<small>sem preço</small>'}</div>`;
+  }).join('');
+}
+
+// botão Ajuda → WhatsApp (wa.me); só aparece se WHATSAPP_NUMBER estiver configurado no servidor
+let waNumber = '';
+const helpCtl = L.control({position: 'bottomleft'});
+helpCtl.onAdd = () => {
+  const a = L.DomUtil.create('a', 'helpbtn');
+  a.target = '_blank'; a.rel = 'noopener'; a.hidden = true; a.textContent = '💬 Ajuda';
+  L.DomEvent.disableClickPropagation(a);
+  a.onclick = () => {
+    const who = ($('#userName')?.textContent || '').replace('…', '').trim();
+    a.href = `https://wa.me/${waNumber}?text=` + encodeURIComponent('Olá! Preciso de ajuda com o Best Price.' + (who ? ` (${who})` : ''));
+  };
+  return a;
+};
+helpCtl.addTo(map);
+
 const BRANDS = {IPIRANGA: '#1d4ed8', SHELL: '#eab308', BR: '#16a34a', BRANCA: '#64748b', PETRONAS: '#0d9488'};
 const SHORT = {'DIESEL S-10': 'S-10', 'DIESEL S-500': 'S-500', 'ARLA': 'ARLA'};
 const ACRONYMS = new Set(['mc', 'br', 'jk', 'sp', 'km', 'axr']);
@@ -123,6 +166,7 @@ function render() {
     m.options.icon.options.popupAnchor = [0, mode === 'dot' ? -38 : -30];
     m.setZIndexOffset(100000 - rank * 100);
   });
+  renderBest();
 }
 
 function renderRoutes() {
@@ -381,7 +425,8 @@ map.on('zoomend', render);
 
 (async () => {
   try {
-    products = (await api('/api/config')).products; product = products[0];
+    const cfg = await api('/api/config'); products = cfg.products; product = products[0];
+    waNumber = cfg.whatsapp || ''; helpCtl.getContainer().hidden = !waNumber;
     [stations, routes] = await Promise.all([api('/api/stations'), api('/api/routes')]);
   } catch (e) {
     if (e.message.startsWith('Sessão')) return;  // já redirecionando para o login

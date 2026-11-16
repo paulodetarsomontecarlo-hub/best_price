@@ -6,6 +6,7 @@ Variáveis de ambiente:
   DB_PATH       arquivo SQLite (padrão best_price.db)
   ADMIN_TOKEN   token para /admin e escrita na API (obrigatório para cadastrar)
   UPLOAD_DIR    pasta das notas fiscais enviadas (padrão ./uploads; mantenha fora do git e com backup)
+  WHATSAPP_NUMBER  telefone do suporte com DDI+DDD, só dígitos (ex.: 5517999999999); habilita o botão Ajuda
   COOKIE_SECURE 1 para marcar o cookie de sessão como Secure (use com HTTPS)
 
 Clientes entram com CPF/CNPJ + senha (cadastrados no /admin.html ou por import_clients.py).
@@ -31,6 +32,7 @@ STATIC = ROOT / "static"
 DB_PATH = os.environ.get("DB_PATH", str(ROOT / "best_price.db"))
 ADMIN_TOKEN = os.environ.get("ADMIN_TOKEN", "")
 COOKIE_SECURE = os.environ.get("COOKIE_SECURE") == "1"
+WHATSAPP_NUMBER = "".join(c for c in os.environ.get("WHATSAPP_NUMBER", "") if c.isdigit())  # ex.: 5517999999999
 PRODUCTS = ["DIESEL S-10", "DIESEL S-500", "ARLA"]
 
 SCHEMA = """
@@ -238,7 +240,7 @@ class Handler(BaseHTTPRequestHandler):
                 if u.path == "/api/routes":
                     return self.send_json(routes_with_stats(con))
                 if u.path == "/api/config":
-                    return self.send_json({"products": PRODUCTS})
+                    return self.send_json({"products": PRODUCTS, "whatsapp": WHATSAPP_NUMBER})
             return self.send_json({"error": "não encontrado"}, 404)
         self.serve_static(u.path)
 
