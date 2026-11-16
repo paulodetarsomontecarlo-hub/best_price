@@ -75,6 +75,8 @@ python rebuild_from_pluscodes.py "pluscode unidades.csv"
 O script **apaga** postos, preços e rotas atuais e recria: um posto por linha, `data/seed.json` atualizado, preços mock e rotas por rodovia (a rodovia é herdada do posto antigo equivalente quando o nome/cidade casam; postos novos ficam sem rodovia e portanto fora das rotas até alguém informá-la no admin).
 Para só **conferir** o casamento/coordenadas sem gravar: `python check_pluscodes.py "pluscode unidades.csv"` (acrescente `--apply` para gravar).
 
+Alternativa genérica (arquivo de texto, sem planilha): `python import_pluscodes.py postos.txt [--replace]`, uma linha por posto: `33R4+XR Margem Esquerda, Gaspar - Santa Catarina ; Nome ; Bandeira ; Rodovia`. Códigos curtos usam a cidade como referência (Nominatim); completos funcionam offline (`olc.py`). `--replace` desativa os postos que não estão no arquivo. Esse importador **atualiza/cria** postos; já o `rebuild_from_pluscodes.py` **recria a base inteira**.
+
 Situação atual: **36 postos**, todos com `geo_quality = ok`.
 
 Scripts legados (úteis se surgir outra fonte): `import_kml.py` (KMZ do Google Maps), `import_stations.py` (CSV de scraper), `geocode.py` (Nominatim). Postos também podem ser criados/editados em `/admin.html`.
@@ -124,9 +126,10 @@ auth.py                CPF/CNPJ, senhas (scrypt), sessões, bloqueio por tentati
 claims.py              "Preço melhor?": validação, anexos, fila e aplicação do preço
 planner.py             roteirizador: geocode (Nominatim), rota (OSRM), postos ao longo da rota
 rebuild_from_pluscodes.py   refaz a base de postos a partir da planilha de Plus Codes  (fonte oficial)
-check_pluscodes.py    decodificador de Plus Code + conferência/ajuste de coordenadas
+check_pluscodes.py     decodificador de Plus Code + conferência/ajuste de coordenadas
 import_clients.py      cadastro de clientes por CSV
 import_kml.py / import_stations.py / geocode.py   importadores legados
+import_pluscodes.py    importador genérico de Plus Codes em texto (usa olc.py)
 data/seed.json         postos e rotas carregados em banco vazio
 static/                index.html, app.js, style.css, login.html, admin.html
 docs/                  API, operação do piloto, arquitetura
