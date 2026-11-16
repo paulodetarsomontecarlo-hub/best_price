@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS stations (
   lon REAL,
   address TEXT DEFAULT '',
   category TEXT DEFAULT '',
+  geo_quality TEXT DEFAULT '',
   active INTEGER NOT NULL DEFAULT 1
 );
 CREATE TABLE IF NOT EXISTS prices (
@@ -79,9 +80,27 @@ def init_db():
     with db() as con:
         con.executescript(SCHEMA)
         cols = {r["name"] for r in con.execute("PRAGMA table_info(stations)")}
-        for c in ("address", "category"):  # migração de bancos criados antes
+        for c in ("address", "category", "geo_quality"):  # migração de bancos criados antes
             if c not in cols:
                 con.execute(f"ALTER TABLE stations ADD COLUMN {c} TEXT DEFAULT ''")
+
+
+def load_seed():
+    """Banco vazio: carrega data/seed.json (postos da rede e rotas por rodovia, sem preços)."""
+    seed = ROOT / "data" / "seed.json"
+    with db() as con:
+        if not seed.exists() or con.execute("SELECT 1 FROM stations LIMIT 1").fetchone():
+            return
+        data = json.loads(seed.read_text(encoding="utf-8"))
+        ids = []
+        for s in data["stations"]:
+            ids.append(con.execute(
+                "INSERT INTO stations (name,brand,city,uf,highway,lat,lon,address,category,geo_quality) "
+                "VALUES (:name,:brand,:city,:uf,:highway,:lat,:lon,:address,:category,:geo_quality)", s).lastrowid)
+        for r in data["routes"]:
+            rid = con.execute("INSERT INTO routes (name,highway) VALUES (?,?)", (r["name"], r["highway"])).lastrowid
+            for pos, i in enumerate(r["stations"]):
+                con.execute("INSERT INTO route_stations (route_id,station_id,position) VALUES (?,?,?)", (rid, ids[i], pos))
 
 
 def now():
@@ -241,12 +260,13 @@ class Handler(BaseHTTPRequestHandler):
                     b.get("highway", ""), lat, lon, b.get("address", ""), b.get("category", ""))
             if method == "POST":
                 cur = con.execute(
-                    "INSERT INTO stations (name,brand,city,uf,highway,lat,lon,address,category) "
-                    "VALUES (?,?,?,?,?,?,?,?,?)", vals)
+                    "INSERT INTO stations (name,brand,city,uf,highway,lat,lon,address,category,geo_quality) "
+                    "VALUES (?,?,?,?,?,?,?,?,?,'manual')", vals)
                 return {"id": cur.lastrowid}
             if method == "PUT" and rid:
                 con.execute("UPDATE stations SET name=?,brand=?,city=?,uf=?,highway=?,lat=?,lon=?,"
-                            "address=?,category=? WHERE id=?", vals + (rid,))
+                            "address=?,category=?,geo_quality=CASE WHEN lat IS ? AND lon IS ? THEN geo_quality ELSE 'manual' END "
+                            "WHERE id=?", vals + (lat, lon, rid))
                 return {"ok": True}
         if res == "prices" and method == "PUT":
             # {"station_id": 1, "prices": {"DIESEL S-10": 6.12, "ARLA": 3.4}}  (vazio/null = remove)
@@ -293,6 +313,7 @@ class Handler(BaseHTTPRequestHandler):
 
 def main():
     init_db()
+    load_seed()
     port = int(os.environ.get("PORT", 8000))
     if not ADMIN_TOKEN:
         print("AVISO: defina ADMIN_TOKEN para poder cadastrar postos/preços.", file=sys.stderr)

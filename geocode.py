@@ -1,17 +1,25 @@
 #!/usr/bin/env python3
-"""Preenche lat/lon dos postos sem coordenadas usando o Nominatim (OpenStreetMap).
+"""Corrige/preenche lat/lon dos postos usando o Nominatim (OpenStreetMap).
 
-Uso: python3 geocode.py        (precisa de internet; ~1 consulta por segundo)
+Uso: python3 geocode.py          só postos sem coordenadas
+     python3 geocode.py --all    reavalia todos (as coordenadas do KMZ costumam vir erradas)
 
-Tenta endereço completo, depois "rua, cidade, UF" e por fim só a cidade (neste caso
-a posição é aproximada e o posto fica marcado em `approx` no log: confira no /admin.html).
+Precisa de internet; ~1 consulta por segundo. Resultado por posto (coluna geo_quality):
+  ok      endereço (ou rua + cidade) encontrado: coordenada confiável
+  kml     coordenada do arquivo, mantida porque fica perto da cidade
+  approx  só a cidade foi encontrada: posição aproximada (com pequeno deslocamento
+          para os pinos não se sobreporem). Confira no /admin.html.
 """
+import hashlib
 import json
+import math
 import re
+import sys
 import time
 import urllib.parse
 import urllib.request
 
+import import_kml
 import server
 
 UA = "best_price-geocoder/1.0"
@@ -26,30 +34,53 @@ def q(text):
     return (float(data[0]["lat"]), float(data[0]["lon"])) if data else None
 
 
+def km(a, b):
+    dy = (a[0] - b[0]) * 111
+    dx = (a[1] - b[1]) * 111 * math.cos(math.radians(a[0]))
+    return math.hypot(dx, dy)
+
+
+def jitter(sid, pos):
+    h = hashlib.md5(str(sid).encode()).digest()
+    return (pos[0] + (h[0] / 255 - .5) * .05, pos[1] + (h[1] / 255 - .5) * .05)  # ~±2,7 km
+
+
 def main():
+    everything = "--all" in sys.argv
     server.init_db()
+    centroids = {}
     with server.db() as con:
-        rows = con.execute("SELECT * FROM stations WHERE active=1 AND lat IS NULL").fetchall()
-        print(f"{len(rows)} posto(s) sem coordenadas")
+        where = "active=1" + ("" if everything else " AND lat IS NULL")
+        rows = con.execute(f"SELECT * FROM stations WHERE {where}").fetchall()
+        print(f"{len(rows)} posto(s) para processar")
         for r in rows:
-            street = re.split(r",\s*(?:N[ºo°]|CEP)", r["address"], flags=re.I)[0]
+            street = re.split(r",\s*(?:N[ºo°]|CEP)", r["address"], flags=re.I)[0].replace("\n", " ")
             num = re.search(r"N[ºo°]:?\s*(\d+)", r["address"], flags=re.I)
             street_n = f"{street} {num.group(1)}" if num else street
-            tries = [(f"{street_n}, {r['city']}, {r['uf']}", "ok"), (f"{street}, {r['city']}, {r['uf']}", "ok"),
-                     (f"{r['city']}, {r['uf']}", "approx")]
-            for text, kind in tries:
-                try:
+            place = f"{r['city']}, {r['uf']}"
+            pos, kind = None, ""
+            try:
+                for text in (f"{street_n}, {place}", f"{street}, {place}"):
                     pos = q(text)
-                except Exception as e:  # rede/limite: segue para o próximo posto
-                    print("erro:", r["name"], e)
-                    break
-                if pos:
-                    con.execute("UPDATE stations SET lat=?, lon=? WHERE id=?", (*pos, r["id"]))
-                    con.commit()
-                    print(f"[{kind}] {r['name']} -> {pos}")
-                    break
-            else:
-                print("[não achou]", r["name"])
+                    if pos:
+                        kind = "ok"
+                        break
+                if not pos:
+                    if place not in centroids:
+                        centroids[place] = q(place)
+                    c = centroids[place]
+                    if c and r["lat"] is not None and km((r["lat"], r["lon"]), c) <= 25:
+                        pos, kind = (r["lat"], r["lon"]), "kml"
+                    elif c:
+                        pos, kind = jitter(r["id"], c), "approx"
+            except Exception as e:
+                print("erro:", r["name"], e)
+                continue
+            if pos:
+                con.execute("UPDATE stations SET lat=?, lon=?, geo_quality=? WHERE id=?", (*pos, kind, r["id"]))
+                con.commit()
+            print(f"[{kind or 'não achou'}] {r['name']} ({r['city']}) -> {pos}")
+        print(import_kml.build_routes(con), "rota(s) por rodovia atualizada(s)")
 
 
 if __name__ == "__main__":
