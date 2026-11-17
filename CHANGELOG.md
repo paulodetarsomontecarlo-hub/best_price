@@ -2,6 +2,9 @@
 
 Histórico do projeto (mais recente primeiro). Branch de trabalho: `claude/trusting-bardeen-5gmp50`.
 
+## Ruas em tons de azul
+- static/osmtint.js: OSM recolorido (rodovias/avenidas/ruas em tons de azul, resto cinza); nomes das cidades numa camada acima da rota.
+
 ## Nomes acima da rota
 - Mapa em camadas: fundo Esri cinza sem nomes, rota, nomes das cidades por cima, pins.
 

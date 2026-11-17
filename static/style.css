@@ -190,4 +190,4 @@ html,body{margin:0;height:100%;font-family:Inter,system-ui,-apple-system,"Segoe 
 .act.note{background:var(--brand)}
 
 /* mapa em tons de cinza (estilo navegação): rota azul e pins se destacam */
-.tiles-gray{filter:contrast(1.12)}
+.nomes-pane{filter:drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff) drop-shadow(0 0 2px #fff)}
