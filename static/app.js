@@ -184,7 +184,7 @@ function pickRoute(id) {
   if (selRoute) {
     const pts = selRoute.station_ids.map(i => stations.find(s => s.id === i)).filter(Boolean).map(s => [s.lat, s.lon]);
     if (pts.length) {
-      routeLine = L.featureGroup([L.polyline(pts, {color: '#fff', weight: 11, opacity: .95}), L.polyline(pts, {color: '#1b73ff', weight: 6, opacity: 1})]).addTo(map);
+      routeLine = L.featureGroup([L.polyline(pts, {color: '#fff', weight: 11, opacity: .95}), L.polyline(pts, {color: '#711CD4', weight: 6, opacity: 1})]).addTo(map);
       map.fitBounds(L.latLngBounds(pts).pad(.2), {maxZoom: 11});
     }
   }
@@ -276,7 +276,7 @@ function setPlan(p) {
   const end = (pt, txt) => L.marker(pt, {zIndexOffset: 500000, icon: L.divIcon({className: '', iconSize: [0, 0], html: `<div class="endpin">${txt}</div>`})});
   const g = p.data.geometry;
   planLine = L.featureGroup([
-    L.polyline(g, {color: '#fff', weight: 11, opacity: .95}), L.polyline(g, {color: '#1b73ff', weight: 6, opacity: 1}),
+    L.polyline(g, {color: '#fff', weight: 11, opacity: .95}), L.polyline(g, {color: '#711CD4', weight: 6, opacity: 1}),
     end(g[0], 'A'), end(g[g.length - 1], 'B')]).addTo(map);
   map.fitBounds(planLine.getBounds().pad(.08), {paddingTopLeft: [0, 70]});
   render(); renderPlan();

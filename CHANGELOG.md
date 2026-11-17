@@ -3,7 +3,7 @@
 Histórico do projeto (mais recente primeiro). Branch de trabalho: `claude/trusting-bardeen-5gmp50`.
 
 ## Mapa estilo navegação
-- Base OSM em tons de cinza e rota destacada em azul com contorno branco (CARTO descartado: exige chave).
+- Base OSM em tons de cinza e rota destacada em roxo #711CD4 com contorno branco (CARTO descartado: exige chave).
 - Roteirizador: rótulos Origem/Destino.
 
 ## Pin Verde (renomeação)
