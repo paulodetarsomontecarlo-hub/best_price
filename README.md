@@ -131,7 +131,7 @@ import_clients.py      cadastro de clientes por CSV
 import_kml.py / import_stations.py / geocode.py   importadores legados
 import_pluscodes.py    importador genérico de Plus Codes em texto (usa olc.py)
 data/seed.json         postos e rotas carregados em banco vazio
-static/                index.html, app.js, osmtint.js (mapa recolorido), style.css, login.html, admin.html
+static/                index.html, app.js, style.css, login.html, admin.html
 docs/                  API, operação do piloto, arquitetura, lista de postos
 olc.py                 decodificador Open Location Code (usado por import_pluscodes.py)
 CHANGELOG.md          histórico do projeto

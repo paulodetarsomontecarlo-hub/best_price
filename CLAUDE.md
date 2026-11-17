@@ -33,7 +33,7 @@ GET `/api/stations` `/api/routes` `/api/config` `/api/me` `/api/geocode?q=` `/ap
 
 ## Front (static/app.js)
 - Marcadores Leaflet em 3 modos por zoom: pin (`dot`), chip de preço (zoom ≥ 8), cartão nome+preço (zoom ≥ 10), com anti-colisão; cor por tercil (verde barato / laranja / vermelho / cinza sem preço).
-- Base de mapa (`static/osmtint.js`): tiles OSM recoloridos no navegador via canvas. Camada `base` = cinza + ruas em **tons de azul por categoria** (rodovia azul escuro → secundária azul claro; ruas comuns ficam brancas/cinza); camada `nomes` = só os textos do tile (resto transparente), num pane acima da rota (halo branco por CSS `.nomes-pane`). Ordem: base < pane `rota` (z 350, linha `#711CD4` com contorno branco) < `nomes` (z 450) < pins. Tolerâncias de cor em `ROADS`/`TOL` (a secundária tem tolerância menor para não pintar plantações). Depende de CORS dos tiles OSM. CARTO exige chave ("API KEY REQUIRED"); Esri Light Gray tem rodovias muito finas. Uso leve do OSM apenas.
+- Base de mapa em camadas (Leaflet panes): fundo **Esri World Light Gray Base** (cinza, sem nomes) < pane `rota` (z 350: linha do roteirizador em roxo `#711CD4` com contorno branco) < pane `nomes` (z 450: **Esri Light Gray Reference**, nomes de cidades/rodovias, por cima da rota) < pins. Tiles OSM têm o nome embutido (não dá para pôr o nome acima da rota) e o CARTO exige chave ("API KEY REQUIRED"). Rodovias ficam finas nesse fundo; um provedor com chave (Stadia/MapTiler) as destaca melhor.
 - Canto inferior direito: cartões "Melhor Diesel S-10 / S-500" (rede toda, ou só a rota traçada) + botões **💬 Ajuda** (wa.me) e **📎 Anexar nota** (abre aba "Preço melhor?"). Clique no posto abre Waze.
 - Menu lateral: Roteirizador, Rotas (preço médio / melhor por rota), Preço melhor?.
 
