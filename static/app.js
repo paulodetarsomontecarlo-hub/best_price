@@ -12,12 +12,13 @@ let plan = null, planLine = null;   // roteirizador: {data, from, to, ids:Set}
 const map = L.map('map', {zoomControl: false, center: [-21.23, -56.94], zoom: 6, minZoom: 4});
 L.control.zoom({position: 'bottomright'}).addTo(map);
 const attr = 'Esri, HERE, Garmin, OpenStreetMap';
-// mapa colorido com rodovias (verde/laranja/rosa), cidades e rótulos já incluídos no tile
-// camadas: fundo (sem nomes) < rota < nomes de cidades/rodovias < pins
+// camadas: fundo cinza < rodovias (azul) < rota < nomes de cidades < pins
+const rodPane = map.createPane('rodovias'); rodPane.style.zIndex = 300; rodPane.classList.add('rod-pane');
 map.createPane('rota').style.zIndex = 350;
 map.createPane('nomes').style.zIndex = 450; map.getPane('nomes').style.pointerEvents = 'none';
 const ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/';
 L.tileLayer(ESRI + 'World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {attribution: attr, maxZoom: 19, className: 'tiles-gray'}).addTo(map);
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', {maxZoom: 19, pane: 'rodovias'}).addTo(map);
 L.tileLayer(ESRI + 'World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {maxZoom: 19, pane: 'nomes'}).addTo(map);
 const labels = L.layerGroup();  // (rótulos vêm no próprio tile; mantido só para a lógica de zoom)
 

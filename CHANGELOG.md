@@ -2,6 +2,9 @@
 
 Histórico do projeto (mais recente primeiro). Branch de trabalho: `claude/trusting-bardeen-5gmp50`.
 
+## Rodovias em azul em todos os zooms
+- Camada Esri World Transportation (recolorida para azul) sobre o fundo cinza; voltaram rodovias/ruas no zoom afastado. Nomes continuam acima da rota.
+
 ## Nomes acima da rota
 - Mapa em camadas: fundo Esri cinza sem nomes, rota, nomes das cidades por cima, pins.
 
