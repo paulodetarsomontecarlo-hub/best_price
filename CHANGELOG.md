@@ -2,6 +2,9 @@
 
 Histórico do projeto (mais recente primeiro). Branch de trabalho: `claude/trusting-bardeen-5gmp50`.
 
+## Nomes acima da rota
+- Mapa em camadas: fundo Esri cinza sem nomes, rota, nomes das cidades por cima, pins.
+
 ## Mapa estilo navegação
 - Base OSM em tons de cinza e rota destacada em roxo #711CD4 com contorno branco (CARTO descartado: exige chave).
 - Roteirizador: rótulos Origem/Destino.

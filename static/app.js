@@ -11,9 +11,14 @@ let plan = null, planLine = null;   // roteirizador: {data, from, to, ids:Set}
 
 const map = L.map('map', {zoomControl: false, center: [-21.23, -56.94], zoom: 6, minZoom: 4});
 L.control.zoom({position: 'bottomright'}).addTo(map);
-const attr = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+const attr = 'Esri, HERE, Garmin, OpenStreetMap';
 // mapa colorido com rodovias (verde/laranja/rosa), cidades e rótulos já incluídos no tile
-L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {attribution: attr, maxZoom: 19, className: 'tiles-gray'}).addTo(map);
+// camadas: fundo (sem nomes) < rota < nomes de cidades/rodovias < pins
+map.createPane('rota').style.zIndex = 350;
+map.createPane('nomes').style.zIndex = 450; map.getPane('nomes').style.pointerEvents = 'none';
+const ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/';
+L.tileLayer(ESRI + 'World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {attribution: attr, maxZoom: 19, className: 'tiles-gray'}).addTo(map);
+L.tileLayer(ESRI + 'World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {maxZoom: 19, pane: 'nomes'}).addTo(map);
 const labels = L.layerGroup();  // (rótulos vêm no próprio tile; mantido só para a lógica de zoom)
 
 const legend = L.control({position: 'bottomleft'});
@@ -184,7 +189,7 @@ function pickRoute(id) {
   if (selRoute) {
     const pts = selRoute.station_ids.map(i => stations.find(s => s.id === i)).filter(Boolean).map(s => [s.lat, s.lon]);
     if (pts.length) {
-      routeLine = L.featureGroup([L.polyline(pts, {color: '#fff', weight: 11, opacity: .95}), L.polyline(pts, {color: '#711CD4', weight: 6, opacity: 1})]).addTo(map);
+      routeLine = L.featureGroup([L.polyline(pts, {color: '#fff', weight: 11, opacity: .95, pane: 'rota'}), L.polyline(pts, {color: '#711CD4', weight: 6, opacity: 1, pane: 'rota'})]).addTo(map);
       map.fitBounds(L.latLngBounds(pts).pad(.2), {maxZoom: 11});
     }
   }
@@ -276,7 +281,7 @@ function setPlan(p) {
   const end = (pt, txt) => L.marker(pt, {zIndexOffset: 500000, icon: L.divIcon({className: '', iconSize: [0, 0], html: `<div class="endpin">${txt}</div>`})});
   const g = p.data.geometry;
   planLine = L.featureGroup([
-    L.polyline(g, {color: '#fff', weight: 11, opacity: .95}), L.polyline(g, {color: '#711CD4', weight: 6, opacity: 1}),
+    L.polyline(g, {color: '#fff', weight: 11, opacity: .95, pane: 'rota'}), L.polyline(g, {color: '#711CD4', weight: 6, opacity: 1, pane: 'rota'}),
     end(g[0], 'A'), end(g[g.length - 1], 'B')]).addTo(map);
   map.fitBounds(planLine.getBounds().pad(.08), {paddingTopLeft: [0, 70]});
   render(); renderPlan();
