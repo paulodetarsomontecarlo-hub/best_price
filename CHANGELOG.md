@@ -26,7 +26,7 @@ Histórico do projeto (mais recente primeiro). Branch de trabalho: `claude/trust
 - Pins de bomba de combustível, chips de preço e cartões com nome do posto conforme o zoom; base OSM com rodovias (CARTO/Esri descartados por exigir chave / ficarem cinza).
 
 ## Roteirizador
-- Cidade de saída → chegada (Nominatim + OSRM), postos a ≤ N km da rota, preço médio/melhor do trecho.
+- Cidade de origem → destino (Nominatim + OSRM), postos a ≤ N km da rota, preço médio/melhor do trecho.
 
 ## Preços mock
 - Faixas: S-10 6,39–6,79; S-500 6,09–6,29; ARLA 3,20–3,90 (assumida).

@@ -25,7 +25,7 @@ encontrado ("a gente tenta cobrir").
 | Filtro por produto (S-10, S-500, Arla) | Responder o cliente, marcar *coberto* e já aplicar o preço no posto |
 | Cartões "Melhor Diesel S-10 / S-500" (rede toda ou só o trajeto) | Histórico de preços (`price_history`) |
 | Preço médio e melhor preço por rodovia | |
-| Roteirizador: cidade de saída → chegada, mostra os postos no caminho | |
+| Roteirizador: cidade de origem → destino, mostra os postos no caminho | |
 | Toque no posto → **Abrir no Waze** | |
 | Botões **Ajuda** (WhatsApp) e **Anexar nota** | |
 
@@ -112,7 +112,7 @@ Os anexos ficam em `uploads/` (fora do git, nomes aleatórios, só o dono ou o a
 
 ## Roteirizador
 
-Menu → **Roteirizador**: digite cidade de saída e de chegada (autocomplete), escolha a distância máxima da rota (2–10 km) e **Traçar rota**. Mostra o trajeto, os postos no caminho em ordem, preço médio e melhor preço do trecho. Geocodificação via Nominatim (1 req/s, cache) e rota via OSRM; ambos públicos e de uso leve — troque por instâncias próprias (`NOMINATIM_URL`, `OSRM_URL`) em produção. Links diretos: `/?de=Campinas&para=Ribeirão Preto`.
+Menu → **Roteirizador**: digite a cidade de origem e a de destino (autocomplete), escolha a distância máxima da rota (2–10 km) e **Traçar rota**. Mostra o trajeto, os postos no caminho em ordem, preço médio e melhor preço do trecho. Geocodificação via Nominatim (1 req/s, cache) e rota via OSRM; ambos públicos e de uso leve — troque por instâncias próprias (`NOMINATIM_URL`, `OSRM_URL`) em produção. Links diretos: `/?de=Campinas&para=Ribeirão Preto`.
 
 ## Ajuda via WhatsApp
 

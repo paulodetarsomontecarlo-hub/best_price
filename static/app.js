@@ -248,7 +248,7 @@ suggest('to', $('#toIn'), $('#toSug'));
 async function resolveCity(key, input) {
   if (chosen[key]) return chosen[key];
   const text = input.value.trim();
-  if (!text) throw new Error('Informe a cidade de ' + (key === 'from' ? 'saída.' : 'chegada.'));
+  if (!text) throw new Error('Informe a cidade de ' + (key === 'from' ? 'origem.' : 'destino.'));
   const res = await api('/api/geocode?q=' + encodeURIComponent(text));
   if (!res.length) throw new Error('Cidade não encontrada: ' + text);
   chosen[key] = res[0]; input.value = res[0].label;
