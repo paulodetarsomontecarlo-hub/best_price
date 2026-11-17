@@ -154,7 +154,7 @@ function render() {
   order.forEach((st, rank) => {
     let m = markers.get(st.id);
     if (!m) {
-      m = L.marker([st.lat, st.lon]).addTo(map).bindPopup(() => popup(st), {minWidth: 230, maxWidth: 280});
+      m = L.marker([st.lat, st.lon]).addTo(map).bindPopup(() => popup(st), {minWidth: 250, maxWidth: 300, autoPanPadding: [20, 20]});
       markers.set(st.id, m);
     }
     const pt = map.latLngToContainerPoint([st.lat, st.lon]);
