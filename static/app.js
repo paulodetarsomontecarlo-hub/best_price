@@ -13,7 +13,12 @@ const map = L.map('map', {zoomControl: false, center: [-21.23, -56.94], zoom: 6,
 L.control.zoom({position: 'bottomright'}).addTo(map);
 const attr = 'Esri, HERE, Garmin, OpenStreetMap';
 // camadas: fundo cinza < rodovias (azul) < rota < nomes de cidades < pins
-const rodPane = map.createPane('rodovias'); rodPane.style.zIndex = 300; rodPane.classList.add('rod-pane');
+// divisas: estados do Brasil (IBGE) e países (Natural Earth), linhas discretas sob as rodovias
+const divPane = map.createPane('divisas'); divPane.style.zIndex = 295; divPane.style.pointerEvents = 'none';
+fetch('geo/estados_br.json').then(r => r.json()).then(g => L.geoJSON(g, {pane: 'divisas', interactive: false,
+  style: {color: '#64748b', weight: 1.1, opacity: .75, dashArray: '5 4', fill: false}}).addTo(map)).catch(() => {});
+fetch('geo/paises.json').then(r => r.json()).then(g => L.geoJSON(g, {pane: 'divisas', interactive: false,
+  style: {color: '#475569', weight: 1.8, opacity: .85, fill: false}}).addTo(map)).catch(() => {});const rodPane = map.createPane('rodovias'); rodPane.style.zIndex = 300; rodPane.classList.add('rod-pane');
 map.createPane('rota').style.zIndex = 350;
 map.createPane('nomes').style.zIndex = 450; map.getPane('nomes').style.pointerEvents = 'none';
 const ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/';
