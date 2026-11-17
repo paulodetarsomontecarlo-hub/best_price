@@ -2,6 +2,10 @@
 
 Histórico do projeto (mais recente primeiro). Branch de trabalho: `claude/trusting-bardeen-5gmp50`.
 
+## Mapa estilo navegação
+- Base OSM em tons de cinza e rota destacada em azul com contorno branco (CARTO descartado: exige chave).
+- Roteirizador: rótulos Origem/Destino.
+
 ## Pin Verde (renomeação)
 - Produto passa a se chamar **Pin Verde** (telas, mensagem do WhatsApp, docs). Repositório e `best_price.db` mantêm o nome técnico.
 
