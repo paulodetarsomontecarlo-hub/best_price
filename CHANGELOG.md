@@ -2,10 +2,6 @@
 
 Histórico do projeto (mais recente primeiro). Branch de trabalho: `claude/trusting-bardeen-5gmp50`.
 
-## Divisas de estados e países
-- Contornos vetoriais (`static/geo/estados_br.json` IBGE e `paises.json`): estados tracejados, países em linha contínua, abaixo das rodovias.
-- Popup do posto com bordas internas maiores.
-
 ## Rodovias em azul em todos os zooms
 - Camada Esri World Transportation (recolorida para azul) sobre o fundo cinza; voltaram rodovias/ruas no zoom afastado. Nomes continuam acima da rota.
 
